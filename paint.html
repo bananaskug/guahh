@@ -5,109 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>axOS Paint</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background-color: #2b2b2b;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-        }
-        .toolbar {
-            padding: 8px;
-            background-color: #1a1a1a;
-            border-bottom: 1px solid #444;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 15px;
-            flex-shrink: 0;
-        }
-        .toolbar-section {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 10px;
-            border-right: 1px solid #444;
-        }
-        .toolbar-section:last-child {
-            border-right: none;
-        }
-        .toolbar-section label {
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        .color-palette {
-            display: grid;
-            grid-template-columns: repeat(10, 24px);
-            gap: 4px;
-        }
-        .color-swatch {
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            border-radius: 50%;
-            transition: transform 0.1s ease;
-        }
-        .color-swatch:hover {
-            transform: scale(1.1);
-        }
-        .color-swatch.active {
-            border-color: #0078d4;
-            transform: scale(1.15);
-        }
-        canvas {
-            display: block;
-            background-color: #fff;
-            cursor: crosshair;
-        }
-        .canvas-container {
-            flex-grow: 1;
-            overflow: auto;
-            background-color: #444;
-        }
-        button, input {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-        button {
-            background-color: #444;
-            color: #fff;
-            border: 1px solid #666;
-            padding: 8px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #555;
-        }
-        button.active {
-            background-color: #0078d4;
-            border-color: #0078d4;
-        }
-        input[type="range"] {
-            width: 100px;
-        }
-        input[type="text"] {
-            background-color: #444;
-            color: #fff;
-            border: 1px solid #666;
-            padding: 8px;
-            border-radius: 3px;
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background-color: #2b2b2b; color: #fff; display: flex; flex-direction: column; }
+        .toolbar { padding: 8px; background-color: #1a1a1a; border-bottom: 1px solid #444; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; flex-shrink: 0; }
+        .toolbar-section { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-right: 1px solid #444; }
+        .toolbar-section:last-child { border-right: none; }
+        .toolbar-section label { font-size: 14px; white-space: nowrap; }
+        .color-palette { display: grid; grid-template-columns: repeat(10, 24px); gap: 4px; }
+        .color-swatch { width: 24px; height: 24px; cursor: pointer; border: 2px solid transparent; border-radius: 50%; transition: transform 0.1s ease; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { border-color: #0078d4; transform: scale(1.15); }
+        canvas { display: block; background-color: #fff; cursor: crosshair; }
+        .canvas-container { flex-grow: 1; overflow: auto; background-color: #444; }
+        button { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #444; color: #fff; border: 1px solid #666; padding: 8px 12px; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #555; }
+        button.active { background-color: #0078d4; border-color: #0078d4; }
+        input[type="range"] { width: 100px; }
     </style>
 </head>
 <body>
 
     <div class="toolbar">
         <div class="toolbar-section">
-            <input type="text" id="filename-input" placeholder="drawing.art">
-            <button id="save-button">Save</button>
-            <button id="clear-button">Clear</button>
+            <button id="clear-button">Clear Canvas</button>
         </div>
         <div class="toolbar-section">
             <label>Tool:</label>
@@ -135,24 +54,10 @@
     </div>
 
     <script>
-        // --- axOS Integration ---
-        const axOS = {
-            saveFile(filename, content) {
-                if (!filename.endsWith('.art')) {
-                    filename += '.art';
-                }
-                window.parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content } }, '*');
-                window.parent.postMessage({ type: 'axOS_showDialog', payload: { message: `Saved '${filename}' successfully!` } }, '*');
-            }
-        };
-
-        // --- Paint App Logic ---
         const canvas = document.getElementById('paint-canvas');
         const ctx = canvas.getContext('2d');
         const canvasContainer = document.querySelector('.canvas-container');
 
-        const filenameInput = document.getElementById('filename-input');
-        const saveButton = document.getElementById('save-button');
         const clearButton = document.getElementById('clear-button');
         const brushSizeSlider = document.getElementById('brush-size');
         const brushSizeLabel = document.getElementById('brush-size-label');
@@ -167,31 +72,26 @@
             '#4A4A4A', '#9B9B9B', '#F5A623', '#F8E71C', '#7ED321', '#50E3C2', '#4A90E2', '#BD10E0', '#D0021B', '#B8E986'
         ];
         
+        const STORAGE_KEY = 'axOS_Paint_CanvasState';
+
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
         let currentColor = '#000000';
         let isEraser = false;
-        
-        // **FIX**: This variable will hold the current state of the canvas to redraw on resize.
-        let currentImageState = null;
 
-        // **FIX**: The resize function now intelligently redraws the saved state.
         function resizeCanvas() {
+            const savedState = localStorage.getItem(STORAGE_KEY);
             canvas.width = canvasContainer.clientWidth;
             canvas.height = canvasContainer.clientHeight;
             
-            // Set the base background color
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // If we have a previous state (from loading or drawing), draw it back on.
-            if (currentImageState) {
+            if (savedState) {
                 const img = new Image();
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = currentImageState;
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = savedState;
             }
         }
 
@@ -213,8 +113,7 @@
         function stopDrawing() {
             if (isDrawing) {
                 isDrawing = false;
-                // **FIX**: Update the image state after the user finishes a brush stroke.
-                currentImageState = canvas.toDataURL('image/png');
+                localStorage.setItem(STORAGE_KEY, canvas.toDataURL('image/png'));
             }
         }
         
@@ -250,17 +149,9 @@
         });
 
         clearButton.addEventListener('click', () => {
-             // **FIX**: Clear the saved state when clearing the canvas.
-             currentImageState = null;
+             localStorage.removeItem(STORAGE_KEY);
              ctx.fillStyle = '#FFFFFF';
              ctx.fillRect(0, 0, canvas.width, canvas.height);
-        });
-        
-        saveButton.addEventListener('click', () => {
-            const filename = filenameInput.value || 'untitled.art';
-            // Ensure the state is up-to-date before saving
-            currentImageState = canvas.toDataURL('image/png');
-            axOS.saveFile(filename, currentImageState);
         });
 
         penToolBtn.addEventListener('click', () => {
@@ -285,20 +176,6 @@
             roundBrushBtn.classList.remove('active');
         });
         
-        // **FIX**: The message listener now updates the global state.
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'axOS_loadFileContent') {
-                const { filename, content } = event.data.payload;
-                filenameInput.value = filename;
-                
-                // Store the loaded content as our current state
-                currentImageState = content;
-                
-                // Trigger a resize to correctly draw the loaded image onto the canvas
-                resizeCanvas();
-            }
-        });
-        
         window.addEventListener('resize', resizeCanvas);
         
         // Initialize
@@ -306,7 +183,6 @@
         resizeCanvas();
         penToolBtn.classList.add('active');
         roundBrushBtn.classList.add('active');
-
     </script>
 </body>
 </html>
