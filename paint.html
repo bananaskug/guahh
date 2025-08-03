@@ -18,130 +18,48 @@
             overflow: hidden;
             user-select: none;
         }
-
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
+        #app-container { display: flex; flex-direction: column; height: 100%; }
         /* --- Toolbar Styling --- */
         #toolbar {
-            background-color: #444;
-            padding: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-            border-bottom: 2px solid #555;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            z-index: 10;
+            background-color: #444; padding: 8px; display: flex; flex-wrap: wrap;
+            gap: 15px; align-items: center; border-bottom: 2px solid #555;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;
         }
-
-        .tool-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        
-        .tool-group > label {
-            font-size: 0.8em;
-            color: #ccc;
-            text-align: left;
-            margin-bottom: 2px;
-        }
-        
-        .file-controls {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
+        .tool-group { display: flex; flex-direction: column; gap: 4px; }
+        .tool-group > label { font-size: 0.8em; color: #ccc; margin-bottom: 2px; }
+        .file-controls { display: flex; align-items: center; gap: 6px; }
         #filename-input {
-            background-color: #2f2f2f;
-            border: 1px solid #777;
-            color: #fff;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            width: 140px;
+            background-color: #2f2f2f; border: 1px solid #777; color: #fff;
+            padding: 8px; border-radius: 4px; font-size: 0.9em; width: 140px;
         }
-        
         button, select {
-            background-color: #5a5a5a;
-            color: #fff;
-            border: 1px solid #777;
-            border-radius: 4px;
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 1em;
+            background-color: #5a5a5a; color: #fff; border: 1px solid #777;
+            border-radius: 4px; padding: 8px 12px; cursor: pointer;
+            transition: background-color 0.2s; font-size: 1em;
         }
-
-        button:hover, select:hover {
-            background-color: #6a6a6a;
-        }
-        
-        #brush-size {
-            width: 120px;
-        }
-        
-        #size-display {
-             width: 30px;
-             text-align: center;
-             font-weight: bold;
-        }
-
+        button:hover, select:hover { background-color: #6a6a6a; }
+        #brush-size { width: 120px; }
+        #size-display { width: 30px; text-align: center; font-weight: bold; }
         /* --- Color Palette --- */
-        #color-palette {
-            display: grid;
-            grid-template-columns: repeat(14, 1fr);
-            gap: 3px;
-            max-width: 320px;
-        }
-        
+        #color-palette { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; max-width: 320px; }
         .color-swatch {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: transform 0.1s, border-color 0.2s;
+            width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: transform 0.1s, border-color 0.2s;
         }
-
-        .color-swatch:hover {
-            transform: scale(1.1);
-        }
-
-        .color-swatch.selected {
-            border-color: #fff;
-            box-shadow: 0 0 5px #fff;
-            transform: scale(1.15);
-        }
-
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border-color: #fff; box-shadow: 0 0 5px #fff; transform: scale(1.15); }
         /* --- Canvas --- */
         #canvas-container {
-            flex-grow: 1;
-            position: relative;
-            background-color: #282828; /* Checkerboard pattern background */
+            flex-grow: 1; position: relative; background-color: #282828;
             background-image:
-              linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
-              linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
-              linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+              linear-gradient(45deg, #3a3a3a 25%, transparent 25%), linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, #3a3a3a 75%), linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
-
-        #drawing-canvas {
-            background-color: #FFFFFF;
-            cursor: crosshair;
-            display: block; /* Removes bottom space */
-        }
+        #drawing-canvas { background-color: #FFFFFF; cursor: crosshair; display: block; }
     </style>
 </head>
 <body>
-
     <div id="app-container">
         <!-- Toolbar for Controls -->
         <div id="toolbar">
@@ -153,37 +71,22 @@
                     <button id="open-btn">Open</button>
                 </div>
             </div>
-            
-            <div class="tool-group">
-                 <label>Canvas</label>
-                 <button id="clear-btn">Clear</button>
-            </div>
-            
+            <div class="tool-group"><label>Canvas</label><button id="clear-btn">Clear</button></div>
             <div class="tool-group">
                  <label>Brush Type</label>
                  <select id="brush-type">
-                     <option value="normal">Normal</option>
-                     <option value="spray">Spray</option>
-                     <option value="ribbon">Ribbon</option>
-                     <option value="eraser">Eraser</option>
+                     <option value="normal">Normal</option><option value="spray">Spray</option>
+                     <option value="ribbon">Ribbon</option><option value="eraser">Eraser</option>
                  </select>
             </div>
-            
             <div class="tool-group">
                 <label>Thickness (<span id="size-display">5</span>px)</label>
                 <input type="range" id="brush-size" min="1" max="100" value="5">
             </div>
-            
-            <div class="tool-group">
-                <label>Color</label>
-                <div id="color-palette"></div>
-            </div>
+            <div class="tool-group"><label>Color</label><div id="color-palette"></div></div>
         </div>
-
         <!-- Drawing Area -->
-        <main id="canvas-container">
-            <canvas id="drawing-canvas"></canvas>
-        </main>
+        <main id="canvas-container"><canvas id="drawing-canvas"></canvas></main>
     </div>
 
     <script>
@@ -197,48 +100,35 @@
          * @param {string} message - The message to display in the pop-up.
          */
         function showOSDialog(message) {
-            parent.postMessage({
-                type: 'axOS_showDialog',
-                payload: { message }
-                // No ID or callback needed for a simple notification
-            }, '*');
+            parent.postMessage({ type: 'axOS_showDialog', payload: { message } }, '*');
         }
 
         /**
-         * Saves content to a file in the axOS VFS.
-         * @param {string} filename - The name of the file (e.g., 'data.json').
-         * @param {string} content - The content to save.
-         * @param {function} callback - A function to call with the result.
+         * Registers a file type with the OS so it knows which app to use.
+         * @param {string} extension - The file extension (e.g., 'art').
+         * @param {string} appUrl - The full URL of this app.
+         * @param {string} description - A user-friendly description of the file type.
+         * @param {string} iconUrl - A Data URL for the file icon (e.g., SVG).
          */
+        function registerFileType(extension, appUrl, description, iconUrl) {
+            parent.postMessage({
+                type: 'axOS_registerFileType',
+                payload: { extension, appUrl, description, iconUrl }
+            }, '*');
+        }
+
         function saveFile(filename, content, callback) {
             const id = messageId++;
             fileSystemCallbacks[id] = callback;
             parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content }, id: id }, '*');
         }
 
-        /**
-         * Loads content from a file in the axOS VFS.
-         * @param {string} filename - The name of the file to load.
-         * @param {function} callback - A function to call with the file's content.
-         */
         function loadFile(filename, callback) {
             const id = messageId++;
             fileSystemCallbacks[id] = callback;
             parent.postMessage({ type: 'axOS_loadFile', payload: { filename }, id: id }, '*');
         }
-        
-        /**
-         * Deletes a file from the axOS VFS.
-         * @param {string} filename - The name of the file to delete.
-         * @param {function} callback - A function to call with the result.
-         */
-        function deleteFile(filename, callback) {
-            const id = messageId++;
-            fileSystemCallbacks[id] = callback;
-            parent.postMessage({ type: 'axOS_deleteFile', payload: { filename }, id: id }, '*');
-        }
 
-        // Listen for messages coming back from the OS
         window.addEventListener('message', (event) => {
             const { type, payload, id } = event.data;
             if (fileSystemCallbacks[id]) {
@@ -254,14 +144,6 @@
             const ctx = canvas.getContext('2d');
             const canvasContainer = document.getElementById('canvas-container');
 
-            // --- State Variables ---
-            let isDrawing = false;
-            let currentColor = '#FF0000';
-            let brushSize = 5;
-            let currentBrush = 'normal';
-            let lastX = 0;
-            let lastY = 0;
-
             // --- UI Element References ---
             const filenameInput = document.getElementById('filename-input');
             const saveBtn = document.getElementById('save-btn');
@@ -271,18 +153,16 @@
             const sizeDisplay = document.getElementById('size-display');
             const brushTypeSelector = document.getElementById('brush-type');
             const colorPaletteContainer = document.getElementById('color-palette');
+
+            // --- State Variables ---
+            let isDrawing = false, currentColor = '#FF0000', brushSize = 5,
+                currentBrush = 'normal', lastX = 0, lastY = 0;
             
             // --- Color Palette Setup ---
-            const colors = [
-                '#FFFFFF', '#C1C1C1', '#858585', '#555555', '#2A2A2A', '#000000', '#007bff', '#19a974',
-                '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3', '#e81cff',
-                '#ff4136', '#ff851b', '#ffdc00', '#2ecc40', '#7fdbff', '#b10dc9', '#f012be', '#39cccc',
-                '#f56565', '#ed8936', '#ecc94b', '#48bb78', '#4299e1', '#9f7aea', '#ed64a6', '#a0aec0'
-            ];
+            const colors = ['#FFFFFF','#C1C1C1','#858585','#555555','#2A2A2A','#000000','#007bff','#19a974','#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3','#e81cff','#ff4136','#ff851b','#ffdc00','#2ecc40','#7fdbff','#b10dc9','#f012be','#39cccc','#f56565','#ed8936','#ecc94b','#48bb78','#4299e1','#9f7aea','#ed64a6','#a0aec0'];
             colors.forEach(color => {
                 const swatch = document.createElement('div');
-                swatch.className = 'color-swatch';
-                swatch.style.backgroundColor = color;
+                swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
                 if (color === currentColor) swatch.classList.add('selected');
                 swatch.addEventListener('click', () => {
                     currentColor = color;
@@ -293,156 +173,119 @@
             });
 
             // --- Canvas Sizing and Management ---
-            function resizeCanvas() {
-                // Save current canvas state
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                // Resize
-                canvas.width = canvasContainer.clientWidth;
-                canvas.height = canvasContainer.clientHeight;
-                // Restore saved state
-                ctx.putImageData(imageData, 0, 0);
-            }
-
             function clearCanvas(confirm = true) {
-                if (confirm && !window.confirm('Are you sure you want to clear the canvas? This cannot be undone.')) {
-                    return;
-                }
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (confirm && !window.confirm('Are you sure you want to clear the canvas?')) return;
+                ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
+            window.addEventListener('resize', () => {
+                canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight;
+                clearCanvas(false); // Consider preserving content on resize if needed
+            });
+            canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight;
+            clearCanvas(false);
             
-            window.addEventListener('resize', resizeCanvas);
-            clearCanvas(false); // Start with a blank white canvas
-
             // --- Drawing Logic ---
             function getCoords(e) {
                 const rect = canvas.getBoundingClientRect();
                 const event = e.touches ? e.touches[0] : e;
                 return [event.clientX - rect.left, event.clientY - rect.top];
             }
-
-            function startDrawing(e) {
-                e.preventDefault();
-                isDrawing = true;
-                [lastX, lastY] = getCoords(e);
-            }
-            
+            function startDrawing(e) { e.preventDefault(); isDrawing = true; [lastX, lastY] = getCoords(e); }
             function draw(e) {
-                if (!isDrawing) return;
-                e.preventDefault();
+                if (!isDrawing) return; e.preventDefault();
                 const [currentX, currentY] = getCoords(e);
-                ctx.lineWidth = brushSize;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.globalCompositeOperation = (currentBrush === 'eraser') ? 'destination-out' : 'source-over';
-                ctx.strokeStyle = (currentBrush === 'eraser') ? 'rgba(0,0,0,1)' : currentColor;
-                ctx.fillStyle = currentColor;
-                
+                Object.assign(ctx, { lineWidth: brushSize, lineCap: 'round', lineJoin: 'round',
+                    globalCompositeOperation: (currentBrush === 'eraser') ? 'destination-out' : 'source-over',
+                    strokeStyle: (currentBrush === 'eraser') ? 'rgba(0,0,0,1)' : currentColor, fillStyle: currentColor });
                 switch(currentBrush) {
                     case 'spray':
                         for (let i = brushSize * 2; i--; ) {
-                            const radius = brushSize / 2;
-                            const offsetX = (Math.random() - 0.5) * brushSize;
-                            const offsetY = (Math.random() - 0.5) * brushSize;
-                            if (Math.sqrt(offsetX*offsetX + offsetY*offsetY) <= radius) {
-                                ctx.fillRect(currentX + offsetX, currentY + offsetY, 1, 1);
-                            }
+                            const radius = brushSize/2, offsetX = (Math.random()-0.5)*brushSize, offsetY = (Math.random()-0.5)*brushSize;
+                            if (Math.sqrt(offsetX*offsetX + offsetY*offsetY) <= radius) ctx.fillRect(currentX + offsetX, currentY + offsetY, 1, 1);
                         }
                         break;
                     case 'ribbon':
-                        ctx.beginPath();
-                        ctx.moveTo(lastX - brushSize / 4, lastY - brushSize / 4);
-                        ctx.lineTo(currentX - brushSize / 4, currentY - brushSize / 4);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.moveTo(lastX + brushSize / 4, lastY + brushSize / 4);
-                        ctx.lineTo(currentX + brushSize / 4, currentY + brushSize / 4);
-                        ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(lastX-brushSize/4, lastY-brushSize/4); ctx.lineTo(currentX-brushSize/4, currentY-brushSize/4); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(lastX+brushSize/4, lastY+brushSize/4); ctx.lineTo(currentX+brushSize/4, currentY+brushSize/4); ctx.stroke();
                         break;
-                    default: // normal, eraser
-                        ctx.beginPath();
-                        ctx.moveTo(lastX, lastY);
-                        ctx.lineTo(currentX, currentY);
-                        ctx.stroke();
-                        break;
+                    default:
+                        ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(currentX, currentY); ctx.stroke(); break;
                 }
                 [lastX, lastY] = [currentX, currentY];
             }
-
             function stopDrawing() { isDrawing = false; ctx.beginPath(); }
 
             // --- Event Listeners ---
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseleave', stopDrawing);
+            canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseleave', stopDrawing);
             canvas.addEventListener('touchstart', startDrawing, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false });
-            canvas.addEventListener('touchend', stopDrawing);
-            
+            canvas.addEventListener('touchmove', draw, { passive: false }); canvas.addEventListener('touchend', stopDrawing);
             clearBtn.addEventListener('click', () => clearCanvas(true));
             brushSizeSlider.addEventListener('input', (e) => (sizeDisplay.textContent = brushSize = e.target.value));
             brushTypeSelector.addEventListener('change', (e) => (currentBrush = e.target.value));
             
             // --- File Operations ---
-            const getValidatedFilename = () => {
-                let filename = filenameInput.value.trim();
-                if (!filename) {
-                    showOSDialog("Please enter a filename.");
-                    return null;
-                }
-                if (!filename.toLowerCase().endsWith('.art')) {
-                    filename += '.art';
-                }
+            function getValidatedFilename() {
+                let filename = filenameInput.value.trim(); if (!filename) { showOSDialog("Please enter a filename."); return null; }
+                if (!filename.toLowerCase().endsWith('.art')) filename += '.art';
                 return filename;
-            };
-            
+            }
+
+            function openArtFile(filename) {
+                 if (!filename) return;
+                 loadFile(filename, (response) => {
+                    if (response.success && response.content) {
+                        const img = new Image();
+                        img.onload = () => {
+                            clearCanvas(false);
+                            const canvasRatio = canvas.width / canvas.height, imgRatio = img.width / img.height;
+                            let w, h;
+                            if (imgRatio > canvasRatio) { w = canvas.width; h = canvas.width / imgRatio; } 
+                            else { h = canvas.height; w = canvas.height * imgRatio; }
+                            ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+                            showOSDialog(`Opened '${filename}'.`);
+                            filenameInput.value = filename; // Update input field
+                        };
+                        img.onerror = () => showOSDialog(`Could not load image data from '${filename}'.`);
+                        img.src = response.content;
+                    } else {
+                        showOSDialog(`Error: ${response.error || "File not found."}`);
+                    }
+                });
+            }
+
             saveBtn.addEventListener('click', () => {
                 const filename = getValidatedFilename();
                 if (filename) {
-                    const dataURL = canvas.toDataURL('image/png');
-                    saveFile(filename, dataURL, (response) => {
-                        if (response.success) {
-                            showOSDialog(`'${filename}' saved successfully!`);
-                        } else {
-                            showOSDialog(`Error saving file: ${response.error}`);
-                        }
+                    saveFile(filename, canvas.toDataURL('image/png'), (response) => {
+                        showOSDialog(response.success ? `'${filename}' saved successfully!` : `Error saving: ${response.error}`);
                     });
                 }
             });
+            openBtn.addEventListener('click', () => openArtFile(getValidatedFilename()));
+
+            // --- APP INITIALIZATION AND FILE ASSOCIATION ---
             
-            openBtn.addEventListener('click', () => {
-                const filename = getValidatedFilename();
-                if (filename) {
-                    loadFile(filename, (response) => {
-                        if (response.success && response.content) {
-                            const img = new Image();
-                            img.onload = () => {
-                                clearCanvas(false);
-                                // Draw centered and scaled to fit without stretching
-                                const canvasRatio = canvas.width / canvas.height;
-                                const imgRatio = img.width / img.height;
-                                let w, h, x, y;
-                                if (imgRatio > canvasRatio) { // Image is wider
-                                    w = canvas.width;
-                                    h = canvas.width / imgRatio;
-                                } else { // Image is taller or same ratio
-                                    h = canvas.height;
-                                    w = canvas.height * imgRatio;
-                                }
-                                x = (canvas.width - w) / 2;
-                                y = (canvas.height - h) / 2;
-                                ctx.drawImage(img, x, y, w, h);
-                                showOSDialog(`'${filename}' opened.`);
-                            };
-                            img.onerror = () => showOSDialog(`Could not load image data from '${filename}'. File may be corrupt.`);
-                            img.src = response.content;
-                        } else {
-                            showOSDialog(`Error opening file: ${response.error || "File not found."}`);
-                        }
-                    });
+            function initializeApp() {
+                // 1. Register the .art file type with the OS
+                const artFileIcon = 'data:image/svg+xml;base64,' + btoa(`
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/>
+                        <path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/>
+                        <circle cx="50" cy="75" r="8" fill="#007bff"/>
+                    </svg>
+                `);
+                registerFileType('art', window.location.href, 'axOS Paint Drawing', artFileIcon);
+                
+                // 2. Check if the app was launched to open a file
+                const urlParams = new URLSearchParams(window.location.search);
+                const fileToOpen = urlParams.get('open');
+                if (fileToOpen) {
+                    openArtFile(fileToOpen);
                 }
-            });
+            }
+            
+            initializeApp();
         });
     </script>
 </body>
