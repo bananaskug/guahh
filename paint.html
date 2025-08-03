@@ -68,7 +68,6 @@
                 <div class="file-controls">
                     <input type="text" id="filename-input" placeholder="drawing.art" value="drawing.art">
                     <button id="save-btn">Save</button>
-                    <button id="open-btn">Open</button>
                 </div>
             </div>
             <div class="tool-group"><label>Canvas</label><button id="clear-btn">Clear</button></div>
@@ -111,24 +110,44 @@
          * @param {string} iconUrl - A Data URL for the file icon (e.g., SVG).
          */
         function registerFileType(extension, appUrl, description, iconUrl) {
-            parent.postMessage({
-                type: 'axOS_registerFileType',
-                payload: { extension, appUrl, description, iconUrl }
-            }, '*');
+            parent.postMessage({ type: 'axOS_registerFileType', payload: { extension, appUrl, description, iconUrl }}, '*');
         }
-
+        
+        /**
+         * Saves content to a file in the axOS VFS.
+         * @param {string} filename - The name of the file (e.g., 'data.json').
+         * @param {string} content - The content to save.
+         * @param {function} callback - A function to call with the result.
+         */
         function saveFile(filename, content, callback) {
             const id = messageId++;
             fileSystemCallbacks[id] = callback;
             parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content }, id: id }, '*');
         }
 
+        /**
+         * Loads content from a file in the axOS VFS.
+         * @param {string} filename - The name of the file to load.
+         * @param {function} callback - A function to call with the file's content.
+         */
         function loadFile(filename, callback) {
             const id = messageId++;
             fileSystemCallbacks[id] = callback;
             parent.postMessage({ type: 'axOS_loadFile', payload: { filename }, id: id }, '*');
         }
+        
+        /**
+         * Deletes a file from the axOS VFS.
+         * @param {string} filename - The name of the file to delete.
+         * @param {function} callback - A function to call with the result.
+         */
+        function deleteFile(filename, callback) {
+            const id = messageId++;
+            fileSystemCallbacks[id] = callback;
+            parent.postMessage({ type: 'axOS_deleteFile', payload: { filename }, id: id }, '*');
+        }
 
+        // Listen for messages coming back from the OS
         window.addEventListener('message', (event) => {
             const { type, payload, id } = event.data;
             if (fileSystemCallbacks[id]) {
@@ -147,7 +166,6 @@
             // --- UI Element References ---
             const filenameInput = document.getElementById('filename-input');
             const saveBtn = document.getElementById('save-btn');
-            const openBtn = document.getElementById('open-btn');
             const clearBtn = document.getElementById('clear-btn');
             const brushSizeSlider = document.getElementById('brush-size');
             const sizeDisplay = document.getElementById('size-display');
@@ -178,38 +196,28 @@
                 ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             window.addEventListener('resize', () => {
+                const imgData = canvas.toDataURL(); // Save canvas content
                 canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight;
-                clearCanvas(false); // Consider preserving content on resize if needed
+                const img = new Image(); // Restore canvas content
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = imgData;
             });
             canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight;
             clearCanvas(false);
             
             // --- Drawing Logic ---
             function getCoords(e) {
-                const rect = canvas.getBoundingClientRect();
-                const event = e.touches ? e.touches[0] : e;
+                const rect = canvas.getBoundingClientRect(); const event = e.touches ? e.touches[0] : e;
                 return [event.clientX - rect.left, event.clientY - rect.top];
             }
             function startDrawing(e) { e.preventDefault(); isDrawing = true; [lastX, lastY] = getCoords(e); }
             function draw(e) {
-                if (!isDrawing) return; e.preventDefault();
-                const [currentX, currentY] = getCoords(e);
-                Object.assign(ctx, { lineWidth: brushSize, lineCap: 'round', lineJoin: 'round',
-                    globalCompositeOperation: (currentBrush === 'eraser') ? 'destination-out' : 'source-over',
-                    strokeStyle: (currentBrush === 'eraser') ? 'rgba(0,0,0,1)' : currentColor, fillStyle: currentColor });
+                if (!isDrawing) return; e.preventDefault(); const [currentX, currentY] = getCoords(e);
+                Object.assign(ctx, { lineWidth: brushSize, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: (currentBrush === 'eraser') ? 'destination-out' : 'source-over', strokeStyle: (currentBrush === 'eraser') ? 'rgba(0,0,0,1)' : currentColor, fillStyle: currentColor });
                 switch(currentBrush) {
-                    case 'spray':
-                        for (let i = brushSize * 2; i--; ) {
-                            const radius = brushSize/2, offsetX = (Math.random()-0.5)*brushSize, offsetY = (Math.random()-0.5)*brushSize;
-                            if (Math.sqrt(offsetX*offsetX + offsetY*offsetY) <= radius) ctx.fillRect(currentX + offsetX, currentY + offsetY, 1, 1);
-                        }
-                        break;
-                    case 'ribbon':
-                        ctx.beginPath(); ctx.moveTo(lastX-brushSize/4, lastY-brushSize/4); ctx.lineTo(currentX-brushSize/4, currentY-brushSize/4); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(lastX+brushSize/4, lastY+brushSize/4); ctx.lineTo(currentX+brushSize/4, currentY+brushSize/4); ctx.stroke();
-                        break;
-                    default:
-                        ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(currentX, currentY); ctx.stroke(); break;
+                    case 'spray': for (let i = brushSize * 2; i--; ) { const radius = brushSize/2, oX = (Math.random()-0.5)*brushSize, oY = (Math.random()-0.5)*brushSize; if (Math.sqrt(oX*oX + oY*oY) <= radius) ctx.fillRect(currentX + oX, currentY + oY, 1, 1); } break;
+                    case 'ribbon': ctx.beginPath(); ctx.moveTo(lastX-brushSize/4, lastY-brushSize/4); ctx.lineTo(currentX-brushSize/4, currentY-brushSize/4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lastX+brushSize/4, lastY+brushSize/4); ctx.lineTo(currentX+brushSize/4, currentY+brushSize/4); ctx.stroke(); break;
+                    default: ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(currentX, currentY); ctx.stroke(); break;
                 }
                 [lastX, lastY] = [currentX, currentY];
             }
@@ -218,18 +226,17 @@
             // --- Event Listeners ---
             canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseleave', stopDrawing);
-            canvas.addEventListener('touchstart', startDrawing, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false }); canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing, { passive: false }); canvas.addEventListener('touchmove', draw, { passive: false }); canvas.addEventListener('touchend', stopDrawing);
             clearBtn.addEventListener('click', () => clearCanvas(true));
             brushSizeSlider.addEventListener('input', (e) => (sizeDisplay.textContent = brushSize = e.target.value));
             brushTypeSelector.addEventListener('change', (e) => (currentBrush = e.target.value));
             
             // --- File Operations ---
-            function getValidatedFilename() {
+            const getValidatedFilename = () => {
                 let filename = filenameInput.value.trim(); if (!filename) { showOSDialog("Please enter a filename."); return null; }
                 if (!filename.toLowerCase().endsWith('.art')) filename += '.art';
                 return filename;
-            }
+            };
 
             function openArtFile(filename) {
                  if (!filename) return;
@@ -238,11 +245,7 @@
                         const img = new Image();
                         img.onload = () => {
                             clearCanvas(false);
-                            const canvasRatio = canvas.width / canvas.height, imgRatio = img.width / img.height;
-                            let w, h;
-                            if (imgRatio > canvasRatio) { w = canvas.width; h = canvas.width / imgRatio; } 
-                            else { h = canvas.height; w = canvas.height * imgRatio; }
-                            ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                             showOSDialog(`Opened '${filename}'.`);
                             filenameInput.value = filename; // Update input field
                         };
@@ -258,23 +261,19 @@
                 const filename = getValidatedFilename();
                 if (filename) {
                     saveFile(filename, canvas.toDataURL('image/png'), (response) => {
-                        showOSDialog(response.success ? `'${filename}' saved successfully!` : `Error saving: ${response.error}`);
+                        if (response.success) {
+                            showOSDialog(`'${filename}' was saved successfully!`);
+                        } else {
+                            showOSDialog(`Error saving file: ${response.error}`);
+                        }
                     });
                 }
             });
-            openBtn.addEventListener('click', () => openArtFile(getValidatedFilename()));
 
             // --- APP INITIALIZATION AND FILE ASSOCIATION ---
-            
             function initializeApp() {
                 // 1. Register the .art file type with the OS
-                const artFileIcon = 'data:image/svg+xml;base64,' + btoa(`
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                        <rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/>
-                        <path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/>
-                        <circle cx="50" cy="75" r="8" fill="#007bff"/>
-                    </svg>
-                `);
+                const artFileIcon = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/><path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="75" r="8" fill="#007bff"/></svg>`);
                 registerFileType('art', window.location.href, 'axOS Paint Drawing', artFileIcon);
                 
                 // 2. Check if the app was launched to open a file
@@ -284,7 +283,6 @@
                     openArtFile(fileToOpen);
                 }
             }
-            
             initializeApp();
         });
     </script>
