@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GameSpot</title>
     <!-- 
-        GameSpot Portal by AI - v2
+        GameSpot Portal by AI - v3
         A modern, dark-mode, single-file gaming application.
-        - Fixed navigation bug.
-        - Added Connect Four.
-        - Removed non-game tools.
+        - FIXED: Memory Match game logic completely restored and functional.
+        - All other games verified to be working.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -77,24 +76,23 @@
         #rps-choices button { font-size: 3.5rem; background: none; border: none; color: var(--text-primary); cursor: pointer; margin: 0 15px; transition: transform 0.2s; }
         
         #memory-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 400px; margin: auto;}
-        .memory-card { aspect-ratio: 1; background: linear-gradient(135deg, var(--secondary-accent), var(--primary-accent)); border-radius: 8px; cursor: pointer; perspective: 1000px; }
+        .memory-card { aspect-ratio: 1; background: transparent; border-radius: 8px; cursor: pointer; perspective: 1000px; }
         .memory-card .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .memory-card.is-flipped .card-inner { transform: rotateY(180deg); }
-        .memory-card.is-matched { opacity: 0.3; }
-        .memory-card .front, .memory-card .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 8px; }
-        .memory-card .back { background: var(--primary-surface); }
+        .memory-card.is-matched { opacity: 0.3; cursor: default; }
+        .memory-card .front, .memory-card .back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex;
+            align-items: center; justify-content: center; font-size: 3rem; border-radius: 8px;
+        }
+        .memory-card .front { background: linear-gradient(135deg, var(--secondary-accent), var(--primary-accent)); }
+        .memory-card .back { background: var(--primary-surface); transform: rotateY(180deg); }
 
         #connectfour-board {
             display: grid; grid-template-columns: repeat(7, 1fr);
             background-color: var(--primary-accent); padding: 10px;
             border-radius: 10px; width: fit-content; margin: auto;
         }
-        .connectfour-slot {
-            width: 60px; height: 60px;
-            margin: 5px; border-radius: 50%;
-            background-color: var(--bg-dark);
-            cursor: pointer;
-        }
+        .connectfour-slot { width: 60px; height: 60px; margin: 5px; border-radius: 50%; background-color: var(--bg-dark); cursor: pointer; }
         .connectfour-slot.player1 { background-color: var(--player1-color); }
         .connectfour-slot.player2 { background-color: var(--player2-color); }
 
@@ -120,23 +118,9 @@
         </nav>
 
         <main id="content-area">
-            <!-- Welcome Channel -->
-            <section id="welcome-channel" class="channel-content active">
-                <h1>Welcome to GameSpot</h1>
-                <div class="game-panel"><p>Select a game from the sidebar to start playing.</p></div>
-            </section>
-            
-            <!-- New Connect Four Channel -->
-            <section id="connectfour-channel" class="channel-content">
-                <h2>Strategy: Connect Four</h2>
-                <div class="game-panel">
-                    <div id="connectfour-board"></div>
-                    <p class="game-status" id="connectfour-status">Player 1's Turn</p>
-                </div>
-            </section>
-
-            <!-- Existing Game Channels -->
-            <section id="breakout-channel" class="channel-content"><h2>Arcade: Breakout</h2><div class="game-panel"><canvas id="breakout-canvas" class="game-canvas" width="800" height="500"></canvas><p class="game-status" id="breakout-status">Move your mouse to control the paddle.</p></div></section>
+            <section id="welcome-channel" class="channel-content active"><h1>Welcome to GameSpot</h1><div class="game-panel"><p>Select a game from the sidebar to start playing.</p></div></section>
+            <section id="connectfour-channel" class="channel-content"><h2>Strategy: Connect Four</h2><div class="game-panel"><div id="connectfour-board"></div><p class="game-status" id="connectfour-status"></p></div></section>
+            <section id="breakout-channel" class="channel-content"><h2>Arcade: Breakout</h2><div class="game-panel"><canvas id="breakout-canvas" class="game-canvas" width="800" height="500"></canvas><p class="game-status" id="breakout-status"></p></div></section>
             <section id="snake-channel" class="channel-content"><h2>Arcade: Snake '98</h2><div class="game-panel" style="text-align:center;"><p class="game-status">Score: <span id="snake-score">0</span></p><canvas id="snake-canvas" style="background-color:#9ead86;" class="game-canvas" width="400" height="400"></canvas><p style="margin-top:10px;">Use Arrow Keys to move.</p></div></section>
             <section id="tictactoe-channel" class="channel-content"><h2>Strategy: Tic-Tac-Toe</h2><div class="game-panel"><div id="ttt-board"></div><p id="ttt-status" class="game-status"></p></div></section>
             <section id="rps-channel" class="channel-content"><h2>Fun: Rock, Paper, Scissors</h2><div class="game-panel" style="text-align:center;"><div id="rps-choices"><button data-choice="rock">✊</button><button data-choice="paper">✋</button><button data-choice="scissors">✌️</button></div><p id="rps-result" class="game-status">Choose your hand!</p></div></section>
@@ -155,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showChannel(channelId) {
         if (currentGameLoop) {
             cancelAnimationFrame(currentGameLoop);
-            clearInterval(currentGameLoop); // For setInterval based games like Snake
+            clearInterval(currentGameLoop);
             currentGameLoop = null;
         }
 
@@ -182,150 +166,99 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GAME LOGIC ---
 
     // Connect Four
-    const cfBoard = document.getElementById('connectfour-board');
-    const cfStatus = document.getElementById('connectfour-status');
+    const cfBoard = document.getElementById('connectfour-board'), cfStatus = document.getElementById('connectfour-status');
     const cfRows = 6, cfCols = 7;
     let cfPlayer, cfGameState, cfActive;
-    
     function connectFourInit() {
-        cfBoard.innerHTML = '';
-        cfPlayer = 1;
-        cfActive = true;
+        cfBoard.innerHTML = ''; cfPlayer = 1; cfActive = true;
         cfGameState = Array(cfRows).fill(null).map(() => Array(cfCols).fill(0));
         cfStatus.textContent = "Player 1's Turn";
-        
-        for (let r = 0; r < cfRows; r++) {
-            for (let c = 0; c < cfCols; c++) {
-                const slot = document.createElement('div');
-                slot.classList.add('connectfour-slot');
-                slot.dataset.row = r;
-                slot.dataset.col = c;
-                cfBoard.appendChild(slot);
-            }
-        }
+        for (let r = 0; r < cfRows; r++) for (let c = 0; c < cfCols; c++) cfBoard.insertAdjacentHTML('beforeend', `<div class="connectfour-slot" data-row="${r}" data-col="${c}"></div>`);
         cfBoard.addEventListener('click', handleCFClick);
     }
-    
     function handleCFClick(e) {
-        if (!cfActive || !e.target.classList.contains('connectfour-slot')) return;
+        if (!cfActive || !e.target.matches('.connectfour-slot')) return;
         const col = parseInt(e.target.dataset.col);
-        
         for (let r = cfRows - 1; r >= 0; r--) {
             if (cfGameState[r][col] === 0) {
                 cfGameState[r][col] = cfPlayer;
-                const slot = cfBoard.querySelector(`[data-row='${r}'][data-col='${col}']`);
-                slot.classList.add(`player${cfPlayer}`);
-                if (checkCFWin(r, col)) {
-                    cfStatus.textContent = `Player ${cfPlayer} wins!`;
-                    cfActive = false;
-                } else {
-                    cfPlayer = cfPlayer === 1 ? 2 : 1;
-                    cfStatus.textContent = `Player ${cfPlayer}'s Turn`;
-                }
+                cfBoard.querySelector(`[data-row='${r}'][data-col='${col}']`).classList.add(`player${cfPlayer}`);
+                if (checkCFWin(r, col)) { cfStatus.textContent = `Player ${cfPlayer} wins!`; cfActive = false; } 
+                else { cfPlayer = cfPlayer === 1 ? 2 : 1; cfStatus.textContent = `Player ${cfPlayer}'s Turn`; }
                 return;
             }
         }
     }
-    
     function checkCFWin(r, c) {
         const p = cfPlayer;
-        function checkDirection(dr, dc) {
-            let count = 0;
-            for (let i = -3; i <= 3; i++) {
-                const row = r + i * dr, col = c + i * dc;
-                if (row >= 0 && row < cfRows && col >= 0 && col < cfCols && cfGameState[row][col] === p) {
-                    count++;
-                    if (count >= 4) return true;
-                } else {
-                    count = 0;
-                }
-            }
-            return false;
-        }
-        return checkDirection(0, 1) || checkDirection(1, 0) || checkDirection(1, 1) || checkDirection(1, -1);
+        const check = (dr, dc) => { let count = 0; for (let i=-3;i<=3;i++) {const row=r+i*dr, col=c+i*dc; if(row>=0&&row<cfRows&&col>=0&&col<cfCols&&cfGameState[row][col]===p) {count++;if(count>=4)return true;} else {count=0;}} return false;};
+        return check(0,1)||check(1,0)||check(1,1)||check(1,-1);
     }
 
     // Breakout
-    const breakoutCanvas = document.getElementById('breakout-canvas');
-    const breakoutCtx = breakoutCanvas.getContext('2d');
-    let ball, paddle, bricks, breakoutScore, lives;
+    const breakoutCanvas=document.getElementById('breakout-canvas'),breakoutCtx=breakoutCanvas.getContext('2d'),breakoutStatus=document.getElementById('breakout-status');
+    let ball,paddle,bricks,breakoutScore,lives;
     function breakoutInit() {
-        document.getElementById('breakout-status').textContent = 'Move your mouse to control the paddle.';
-        paddle = { x: breakoutCanvas.width / 2 - 50, y: breakoutCanvas.height - 20, width: 100, height: 10, dx: 7 };
-        ball = { x: breakoutCanvas.width / 2, y: breakoutCanvas.height / 2, radius: 10, dx: 4, dy: -4 };
-        bricks = [];
-        const brickRowCount = 5, brickColumnCount = 9, brickWidth = 75, brickHeight = 20, brickPadding = 10, brickOffsetTop = 30, brickOffsetLeft = 30;
-        breakoutScore = 0; lives = 3;
-        for (let c = 0; c < brickColumnCount; c++) { bricks[c] = []; for (let r = 0; r < brickRowCount; r++) { bricks[c][r] = { x: 0, y: 0, status: 1 }; } }
-        
-        function draw() {
-            if (!currentGameLoop) return;
-            breakoutCtx.clearRect(0, 0, breakoutCanvas.width, breakoutCanvas.height);
-            // Draw Bricks
-            for (let c = 0; c < brickColumnCount; c++) {
-                for (let r = 0; r < brickRowCount; r++) {
-                    if (bricks[c][r].status === 1) {
-                        const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-                        const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-                        bricks[c][r].x = brickX; bricks[c][r].y = brickY;
-                        breakoutCtx.beginPath(); breakoutCtx.rect(brickX, brickY, brickWidth, brickHeight); breakoutCtx.fillStyle = `hsl(${r * 30}, 70%, 50%)`; breakoutCtx.fill(); breakoutCtx.closePath();
-                    }
-                }
-            }
-            // Draw Ball, Paddle, Score, Lives
-            breakoutCtx.beginPath(); breakoutCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2); breakoutCtx.fillStyle = '#f0f0f0'; breakoutCtx.fill(); breakoutCtx.closePath();
-            breakoutCtx.beginPath(); breakoutCtx.rect(paddle.x, paddle.y, paddle.width, paddle.height); breakoutCtx.fillStyle = 'var(--primary-accent)'; breakoutCtx.fill(); breakoutCtx.closePath();
-            breakoutCtx.font = '16px Poppins'; breakoutCtx.fillText(`Score: ${breakoutScore}`, 8, 20); breakoutCtx.fillText(`Lives: ${lives}`, breakoutCanvas.width - 65, 20);
-            
-            // Collision Detection
-            for(let c=0; c<brickColumnCount; c++) {
-                for(let r=0; r<brickRowCount; r++) {
-                    const b = bricks[c][r];
-                    if(b.status === 1 && ball.x > b.x && ball.x < b.x+brickWidth && ball.y > b.y && ball.y < b.y+brickHeight) {
-                        ball.dy = -ball.dy; b.status = 0; breakoutScore++;
-                        if(breakoutScore === brickRowCount*brickColumnCount) {
-                            document.getElementById('breakout-status').textContent = 'YOU WIN!'; cancelAnimationFrame(currentGameLoop); currentGameLoop = null; return;
-                        }
-                    }
-                }
-            }
-
-            if (ball.x + ball.dx > breakoutCanvas.width - ball.radius || ball.x + ball.dx < ball.radius) ball.dx = -ball.dx;
-            if (ball.y + ball.dy < ball.radius) ball.dy = -ball.dy;
-            else if (ball.y + ball.dy > breakoutCanvas.height - ball.radius) {
-                if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) ball.dy = -ball.dy;
-                else {
-                    lives--;
-                    if (!lives) { document.getElementById('breakout-status').textContent = 'GAME OVER. Click Breakout again to retry.'; cancelAnimationFrame(currentGameLoop); currentGameLoop = null; return; }
-                    else { ball.x = breakoutCanvas.width / 2; ball.y = breakoutCanvas.height - 30; ball.dx = 4; ball.dy = -4; paddle.x = (breakoutCanvas.width - paddle.width) / 2; }
-                }
-            }
-            ball.x += ball.dx; ball.y += ball.dy;
-            currentGameLoop = requestAnimationFrame(draw);
+        breakoutStatus.textContent = 'Move your mouse to control the paddle.';
+        paddle={x:breakoutCanvas.width/2-50,y:breakoutCanvas.height-20,width:100,height:10};ball={x:breakoutCanvas.width/2,y:breakoutCanvas.height/2,radius:10,dx:4,dy:-4};
+        bricks=[];const brc=5,bcc=9,bw=75,bh=20,bp=10,bot=30,bol=30;breakoutScore=0;lives=3;
+        for(let c=0;c<bcc;c++){bricks[c]=[];for(let r=0;r<brc;r++){bricks[c][r]={x:0,y:0,status:1}}}
+        breakoutCanvas.addEventListener('mousemove', e=>{const relX=e.clientX-breakoutCanvas.getBoundingClientRect().left;if(relX>0&&relX<breakoutCanvas.width)paddle.x=relX-paddle.width/2});
+        function draw(){
+            if(!currentGameLoop)return;
+            breakoutCtx.clearRect(0,0,breakoutCanvas.width,breakoutCanvas.height);
+            for(let c=0;c<bcc;c++){for(let r=0;r<brc;r++){if(bricks[c][r].status===1){const bX=c*(bw+bp)+bol,bY=r*(bh+bp)+bot;bricks[c][r].x=bX;bricks[c][r].y=bY;breakoutCtx.fillStyle=`hsl(${r*30},70%,50%)`;breakoutCtx.fillRect(bX,bY,bw,bh)}}}
+            breakoutCtx.fillStyle='#f0f0f0';breakoutCtx.beginPath();breakoutCtx.arc(ball.x,ball.y,ball.radius,0,Math.PI*2);breakoutCtx.fill();
+            breakoutCtx.fillStyle='var(--primary-accent)';breakoutCtx.fillRect(paddle.x,paddle.y,paddle.width,paddle.height);
+            breakoutCtx.fillStyle='#f0f0f0';breakoutCtx.font='16px Poppins';breakoutCtx.fillText(`Score: ${breakoutScore}`,8,20);breakoutCtx.fillText(`Lives: ${lives}`,breakoutCanvas.width-65,20);
+            for(let c=0;c<bcc;c++){for(let r=0;r<brc;r++){const b=bricks[c][r];if(b.status===1&&ball.x>b.x&&ball.x<b.x+bw&&ball.y>b.y&&ball.y<b.y+bh){ball.dy=-ball.dy;b.status=0;breakoutScore++;if(breakoutScore===brc*bcc){breakoutStatus.textContent='YOU WIN!';cancelAnimationFrame(currentGameLoop);currentGameLoop=null;return}}}}
+            if(ball.x+ball.dx>breakoutCanvas.width-ball.radius||ball.x+ball.dx<ball.radius)ball.dx=-ball.dx;
+            if(ball.y+ball.dy<ball.radius)ball.dy=-ball.dy;else if(ball.y+ball.dy>breakoutCanvas.height-ball.radius){if(ball.x>paddle.x&&ball.x<paddle.x+paddle.width){ball.dy=-ball.dy}else{lives--;if(!lives){breakoutStatus.textContent='GAME OVER. Click Breakout to retry.';cancelAnimationFrame(currentGameLoop);currentGameLoop=null;return}else{ball.x=breakoutCanvas.width/2;ball.y=breakoutCanvas.height-30;ball.dx=4;ball.dy=-4;paddle.x=(breakoutCanvas.width-paddle.width)/2}}}
+            ball.x+=ball.dx;ball.y+=ball.dy;currentGameLoop=requestAnimationFrame(draw)
         }
-        function movePaddle(e) { const relativeX = e.clientX - breakoutCanvas.getBoundingClientRect().left; if (relativeX > 0 && relativeX < breakoutCanvas.width) paddle.x = relativeX - paddle.width / 2; }
-        breakoutCanvas.addEventListener('mousemove', movePaddle);
         currentGameLoop = requestAnimationFrame(draw);
     }
     
-    // Tic-Tac-Toe (Restored full logic)
-    const tttBoard=document.getElementById('ttt-board'), tttStatus=document.getElementById('ttt-status');
-    let ttt_cp, ttt_gs, ttt_a;
+    // Tic-Tac-Toe
+    const tttBoard=document.getElementById('ttt-board'),tttStatus=document.getElementById('ttt-status');let ttt_cp,ttt_gs,ttt_a;
     function tttInit(){tttBoard.innerHTML='';for(let i=0;i<9;i++)tttBoard.insertAdjacentHTML('beforeend',`<div class="ttt-cell" data-index="${i}"></div>`);tttBoard.querySelectorAll('.ttt-cell').forEach(c=>c.addEventListener('click',tttHandleClick));ttt_cp='X';ttt_gs=Array(9).fill(null);ttt_a=true;tttStatus.textContent=`Player X's turn`}
     function tttHandleClick(e){const i=e.target.dataset.index;if(ttt_gs[i]||!ttt_a)return;ttt_gs[i]=ttt_cp;e.target.textContent=ttt_cp;const wc=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];if(wc.some(c=>c.every(i=>ttt_gs[i]===ttt_cp))){tttStatus.textContent=`Player ${ttt_cp} wins!`;ttt_a=false}else if(!ttt_gs.includes(null)){tttStatus.textContent='Draw!';ttt_a=false}else{ttt_cp=ttt_cp==='X'?'O':'X';tttStatus.textContent=`Player ${ttt_cp}'s turn`}}
     
-    // Rock Paper Scissors (Restored full logic)
+    // Rock Paper Scissors
     document.querySelectorAll('#rps-choices button').forEach(b=>b.addEventListener('click',()=>{const pC=b.dataset.choice,cC=['rock','paper','scissors'][Math.floor(Math.random()*3)];let r;if(pC===cC)r='Tie!';else if((pC==='rock'&&cC==='scissors')||(pC==='paper'&&cC==='rock')||(pC==='scissors'&&cC==='paper'))r='You win!';else r='You lose!';document.getElementById('rps-result').textContent=`You: ${pC}, PC: ${cC}. ${r}`}));
     
-    // Memory Match (Restored full logic)
-    const memoryBoard=document.getElementById('memory-board'),memoryStatus=document.getElementById('memory-status');const cards=['👽','🚀','⭐','🪐','👾','☄️','👽','🚀','⭐','🪐','👾','☄️'];let firstCard,secondCard,lockBoard,moves;
-    function memoryInit(){memoryBoard.innerHTML='';moves=0;memoryStatus.textContent='Moves: 0';cards.sort(()=>0.5-Math.random()).forEach(item=>{const card=`<div class="memory-card" data-value="${item}"><div class="card-inner"><div class="front"></div><div class="back">${item}</div></div></div>`;memoryBoard.insertAdjacentHTML('beforeend',card)});document.querySelectorAll('.memory-card').forEach(c=>c.addEventListener('click',flipCard))}
-    function flipCard(){if(lockBoard||this===firstCard||this.classList.contains('is-matched'))return;this.classList.add('is-flipped');if(!firstCard){firstCard=this;return}secondCard=this;moves++;memoryStatus.textContent=`Moves: ${moves}`;lockBoard=true;firstCard.dataset.value===secondCard.dataset.value?disableCards():unflipCards()}
-    function disableCards(){firstCard.classList.add('is-matched');secondCard.classList.add('is-matched');if(document.querySelectorAll('.is-matched').length===cards.length)memoryStatus.textContent=`You won in ${moves} moves!`;resetBoard()}
-    function unflipCards(){setTimeout(()=>{firstCard.classList.remove('is-flipped');secondCard.classList.remove('is-flipped');resetBoard()},1000)}
-    function resetBoard(){[firstCard,secondCard,lockBoard]=[null,null,false]}
+    // Memory Match - FULLY RESTORED
+    const memoryBoard=document.getElementById('memory-board'),memoryStatus=document.getElementById('memory-status');const cards=['👽','🚀','⭐','🪐','👾','☄️','👽','🚀','⭐','🪐','👾','☄️'];let hasFlippedCard,lockBoard,firstCard,secondCard,moves;
+    function memoryInit(){
+        memoryBoard.innerHTML=''; moves = 0; hasFlippedCard = false; lockBoard = false; firstCard = null; secondCard = null;
+        memoryStatus.textContent = 'Moves: 0';
+        cards.sort(()=>0.5-Math.random()).forEach(item=>{const card=`<div class="memory-card" data-value="${item}"><div class="card-inner"><div class="front">?</div><div class="back">${item}</div></div></div>`;memoryBoard.insertAdjacentHTML('beforeend',card)});
+        document.querySelectorAll('.memory-card').forEach(c=>c.addEventListener('click',flipCard));
+    }
+    function flipCard() {
+        if(lockBoard || this === firstCard) return;
+        this.classList.add('is-flipped');
+        if(!hasFlippedCard) { hasFlippedCard=true; firstCard=this; return; }
+        secondCard = this; moves++; memoryStatus.textContent = `Moves: ${moves}`; checkForMatch();
+    }
+    function checkForMatch() {
+        let isMatch = firstCard.dataset.value === secondCard.dataset.value;
+        isMatch ? disableCards() : unflipCards();
+    }
+    function disableCards() {
+        firstCard.removeEventListener('click', flipCard);
+        secondCard.removeEventListener('click', flipCard);
+        firstCard.classList.add('is-matched'); secondCard.classList.add('is-matched');
+        if(document.querySelectorAll('.is-matched').length === cards.length) memoryStatus.textContent = `You won in ${moves} moves!`;
+        resetBoard();
+    }
+    function unflipCards() {
+        lockBoard = true;
+        setTimeout(() => { firstCard.classList.remove('is-flipped'); secondCard.classList.remove('is-flipped'); resetBoard(); }, 1200);
+    }
+    function resetBoard() { [hasFlippedCard, lockBoard] = [false, false]; [firstCard, secondCard] = [null, null]; }
     
-    // Snake '98 (Restored full logic)
+    // Snake '98
     const snakeCanvas=document.getElementById('snake-canvas'),snakeCtx=snakeCanvas.getContext('2d');const snakeScoreEl=document.getElementById('snake-score'),gridSize=20;let snake,food,score,direction;
     function snakeInit(){if(currentGameLoop)clearInterval(currentGameLoop);snake=[{x:10,y:10}];food={};score=0;direction='right';snakeScoreEl.textContent=0;placeFood();currentGameLoop=setInterval(updateSnake,150)}
     function placeFood(){food={x:Math.floor(Math.random()*gridSize),y:Math.floor(Math.random()*gridSize)}}
