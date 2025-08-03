@@ -5,185 +5,289 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>axOS Paint</title>
     <style>
-        /* --- Basic Setup & Layout --- */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #333; color: #eee; margin: 0; padding: 0;
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none;
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #2b2b2b;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
         }
-        #app-container { display: flex; flex-direction: column; height: 100%; }
-        /* --- Toolbar Styling --- */
-        #toolbar {
-            background-color: #444; padding: 8px; display: flex; flex-wrap: wrap;
-            gap: 15px; align-items: center; border-bottom: 2px solid #555;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;
+        .toolbar {
+            padding: 8px;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
         }
-        .tool-group { display: flex; flex-direction: column; gap: 4px; }
-        .tool-group > label { font-size: 0.8em; color: #ccc; margin-bottom: 2px; }
-        .file-controls { display: flex; align-items: center; gap: 6px; }
-        #filename-input {
-            background-color: #2f2f2f; border: 1px solid #777; color: #fff;
-            padding: 8px; border-radius: 4px; font-size: 0.9em; width: 140px;
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            border-right: 1px solid #444;
         }
-        button, select {
-            background-color: #5a5a5a; color: #fff; border: 1px solid #777;
-            border-radius: 4px; padding: 8px 12px; cursor: pointer;
-            transition: background-color 0.2s; font-size: 1em;
+        .toolbar-section:last-child {
+            border-right: none;
         }
-        button:hover, select:hover { background-color: #6a6a6a; }
-        #brush-size { width: 120px; }
-        #size-display { width: 30px; text-align: center; font-weight: bold; }
-        .flex-spacer { flex-grow: 1; }
-        #welcome-message { font-size: 0.9em; color: #bbb; margin-right: 10px; }
-        /* --- Color Palette --- */
-        #color-palette { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; max-width: 320px; }
-        .color-swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s, border-color 0.2s; }
-        .color-swatch:hover { transform: scale(1.1); }
-        .color-swatch.selected { border-color: #fff; box-shadow: 0 0 5px #fff; transform: scale(1.15); }
-        /* --- Canvas --- */
-        #canvas-container { flex-grow: 1; position: relative; background-color: #282828; background-image: linear-gradient(45deg, #3a3a3a 25%, transparent 25%), linear-gradient(-45deg, #3a3a3a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #3a3a3a 75%), linear-gradient(-45deg, transparent 75%, #3a3a3a 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
-        #drawing-canvas { background-color: #FFFFFF; cursor: crosshair; display: block; }
-        /* --- In-App Save Modal --- */
-        #save-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        #save-modal { background: #4a4a4a; padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; width: 300px; }
-        #save-modal h3 { margin-top: 0; }
-        #save-modal p { margin: 15px 0; min-height: 24px; }
-        #ok-modal-btn { background-color: #007bff; display: none; }
+        .toolbar-section label {
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(10, 24px);
+            gap: 4px;
+        }
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 50%;
+            transition: transform 0.1s ease;
+        }
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+        .color-swatch.active {
+            border-color: #0078d4;
+            transform: scale(1.15);
+        }
+        canvas {
+            display: block;
+            background-color: #fff; /* A white canvas is standard */
+            cursor: crosshair;
+        }
+        .canvas-container {
+            flex-grow: 1;
+            overflow: auto;
+            background-color: #444;
+        }
+        button, input {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        button {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        button.active {
+            background-color: #0078d4;
+            border-color: #0078d4;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        input[type="text"] {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
-    <div id="app-container">
-        <!-- Toolbar -->
-        <div id="toolbar">
-            <div class="tool-group"><label>File</label><div class="file-controls"><input type="text" id="filename-input" value="drawing.art"><button id="save-btn">Save</button></div></div>
-            <div class="tool-group"><label>Canvas</label><button id="clear-btn">Clear</button></div>
-            <div class="tool-group"><label>Brush Type</label><select id="brush-type"><option value="normal">Normal</option><option value="spray">Spray</option><option value="ribbon">Ribbon</option><option value="eraser">Eraser</option></select></div>
-            <div class="tool-group"><label>Thickness (<span id="size-display">5</span>px)</label><input type="range" id="brush-size" min="1" max="100" value="5"></div>
-            <div class="tool-group"><label>Color</label><div id="color-palette"></div></div>
-            <div class="flex-spacer"></div>
-            <div class="tool-group" style="justify-content: center;"><span id="welcome-message">Welcome, Guest</span></div>
+
+    <div class="toolbar">
+        <div class="toolbar-section">
+            <input type="text" id="filename-input" placeholder="drawing.art">
+            <button id="save-button">Save</button>
+            <button id="clear-button">Clear</button>
         </div>
-        <!-- Drawing Area -->
-        <main id="canvas-container"><canvas id="drawing-canvas"></canvas></main>
+        <div class="toolbar-section">
+            <label>Tool:</label>
+            <button id="pen-tool" class="active">Pen</button>
+            <button id="eraser-tool">Eraser</button>
+        </div>
+        <div class="toolbar-section">
+            <label for="brush-size">Size:</label>
+            <input type="range" id="brush-size" min="1" max="100" value="5">
+            <span id="brush-size-label">5</span>
+        </div>
+        <div class="toolbar-section">
+            <label>Shape:</label>
+            <button id="round-brush" class="active">Round</button>
+            <button id="square-brush">Square</button>
+        </div>
+        <div class="toolbar-section">
+            <label>Colors:</label>
+            <div id="color-palette" class="color-palette"></div>
+        </div>
     </div>
 
-    <!-- In-App Modal for Saving -->
-    <div id="save-modal-overlay">
-        <div id="save-modal"><h3>Save Status</h3><p id="save-status-message">Saving...</p><button id="ok-modal-btn">Ok</button></div>
+    <div class="canvas-container">
+        <canvas id="paint-canvas"></canvas>
     </div>
 
     <script>
-        // --- axOS API for Apps ---
-        const fileSystemCallbacks = {}; let messageId = 0;
-        function showOSDialog(message) { parent.postMessage({ type: 'axOS_showDialog', payload: { message } }, '*'); }
-        function registerFileType(extension, appUrl, description, iconUrl) { parent.postMessage({ type: 'axOS_registerFileType', payload: { extension, appUrl, description, iconUrl } }, '*'); }
-        function saveFile(filename, content, callback) {
-            const id = messageId++; fileSystemCallbacks[id] = callback;
-            parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content }, id: id }, '*');
-            setTimeout(() => { if (fileSystemCallbacks[id]) { fileSystemCallbacks[id]({ success: true }); delete fileSystemCallbacks[id]; } }, 500);
+        // --- axOS Integration ---
+        const axOS = {
+            _requestId: 0,
+            _promises: new Map(),
+
+            saveFile(filename, content) {
+                if (!filename.endsWith('.art')) {
+                    filename += '.art';
+                }
+                window.parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content } }, '*');
+                window.parent.postMessage({ type: 'axOS_showDialog', payload: { message: `Saved '${filename}' successfully!` } }, '*');
+            }
+        };
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'axOS_loadFileContent') {
+                const { filename, content } = event.data.payload;
+                filenameInput.value = filename;
+                
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = content; // The content is the Base64 data URL
+            }
+        });
+
+        // --- Paint App Logic ---
+        const canvas = document.getElementById('paint-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.querySelector('.canvas-container');
+
+        const filenameInput = document.getElementById('filename-input');
+        const saveButton = document.getElementById('save-button');
+        const clearButton = document.getElementById('clear-button');
+        const brushSizeSlider = document.getElementById('brush-size');
+        const brushSizeLabel = document.getElementById('brush-size-label');
+        const penToolBtn = document.getElementById('pen-tool');
+        const eraserToolBtn = document.getElementById('eraser-tool');
+        const roundBrushBtn = document.getElementById('round-brush');
+        const squareBrushBtn = document.getElementById('square-brush');
+        const paletteContainer = document.getElementById('color-palette');
+        
+        const colors = [
+            '#000000', '#FFFFFF', '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3', '#8B4513',
+            '#4A4A4A', '#9B9B9B', '#F5A623', '#F8E71C', '#7ED321', '#50E3C2', '#4A90E2', '#BD10E0', '#D0021B', '#B8E986'
+        ];
+        
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentColor = '#000000';
+        let isEraser = false;
+
+        function resizeCanvas() {
+            canvas.width = canvasContainer.clientWidth;
+            canvas.height = canvasContainer.clientHeight;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            ctx.strokeStyle = isEraser ? '#FFFFFF' : currentColor;
+            ctx.lineJoin = 'round'; // Keeps lines smooth
+            ctx.lineWidth = brushSizeSlider.value;
+            // brush shape is set by other buttons
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
         }
         
-        // --- App Logic ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const canvas=document.getElementById('drawing-canvas'); const ctx=canvas.getContext('2d');
-            const filenameInput=document.getElementById('filename-input'); const saveBtn=document.getElementById('save-btn');
-            const clearBtn=document.getElementById('clear-btn'); const brushSizeSlider=document.getElementById('brush-size');
-            const sizeDisplay=document.getElementById('size-display'); const brushTypeSelector=document.getElementById('brush-type');
-            const colorPaletteContainer=document.getElementById('color-palette'); const saveModalOverlay=document.getElementById('save-modal-overlay');
-            const saveStatusMessage=document.getElementById('save-status-message'); const okModalBtn=document.getElementById('ok-modal-btn');
-            const welcomeMessage=document.getElementById('welcome-message'); let isDrawing=false,currentColor='#FF0000',brushSize=5,currentBrush='normal',lastX=0,lastY=0;
-
-            function renderFile(filename, content) {
-                clearCanvas();
-                const extension = filename.split('.').pop().toLowerCase();
-
-                if (extension === 'art') {
-                    try {
-                        const artData = JSON.parse(content);
-                        // Validate that it's a real .art file and not just some random JSON
-                        if (artData && artData.fileType === 'axOS.Paint.Art' && artData.imageData) {
-                            const img = new Image();
-                            img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            img.onerror = () => showOSDialog(`Could not load image data from '${filename}'.`);
-                            img.src = artData.imageData; // Use the image data from the JSON
-                        } else {
-                            throw new Error("Invalid .art file structure.");
-                        }
-                    } catch (e) {
-                        showOSDialog(`Error: Could not parse '${filename}'. It may be corrupt or not a valid .art file.`);
-                        return;
-                    }
-                } else if (extension === 'txt') {
-                    drawTextOntoCanvas(content);
-                } else {
-                    showOSDialog(`Unsupported file type: .${extension}`);
-                    return;
-                }
-                
-                showOSDialog(`Opened '${filename}'.`);
-                filenameInput.value = filename;
-            }
-
-            window.addEventListener('message', (event) => {
-                const {type, payload, id} = event.data;
-                if(fileSystemCallbacks[id]){ fileSystemCallbacks[id](payload); delete fileSystemCallbacks[id]; }
-                else if(type === 'axOS_environmentUpdate'){ welcomeMessage.textContent = `Welcome, ${payload.username || 'Guest'}`; }
-                else if(type === 'axOS_loadFileContent'){ renderFile(payload.filename, payload.content); }
-            });
-            
-            const colors=['#FFFFFF','#C1C1C1','#858585','#555555','#2A2A2A','#000000','#007bff','#19a974','#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3','#e81cff','#ff4136','#ff851b','#ffdc00','#2ecc40','#7fdbff','#b10dc9','#f012be','#39cccc','#f56565','#ed8936','#ecc94b','#48bb78','#4299e1','#9f7aea','#ed64a6','#a0aec0'];
-            colors.forEach(c=>{const s=document.createElement('div');s.className='color-swatch';s.style.backgroundColor=c;if(c===currentColor)s.classList.add('selected');s.addEventListener('click',()=>{currentColor=c;document.querySelector('.color-swatch.selected')?.classList.remove('selected');s.classList.add('selected');});colorPaletteContainer.appendChild(s);});
-            
-            function clearCanvas() { ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,canvas.width,canvas.height); }
-            window.addEventListener('resize', ()=>{ const canvasContainer = document.getElementById('canvas-container'); const d=canvas.toDataURL(); canvas.width=canvasContainer.clientWidth;canvas.height=canvasContainer.clientHeight;const i=new Image();i.onload=()=>ctx.drawImage(i,0,0);i.src=d; });
-            clearCanvas();
-
-            function getCoords(e){const r=canvas.getBoundingClientRect();const v=e.touches?e.touches[0]:e;return[v.clientX-r.left,v.clientY-r.top];}
-            function startDrawing(e){e.preventDefault();isDrawing=true;[lastX,lastY]=getCoords(e);}
-            function draw(e){if(!isDrawing)return;e.preventDefault();const [cX,cY]=getCoords(e);Object.assign(ctx,{lineWidth:brushSize,lineCap:'round',lineJoin:'round',globalCompositeOperation:(currentBrush==='eraser')?'destination-out':'source-over',strokeStyle:(currentBrush==='eraser')?'rgba(0,0,0,1)':currentColor,fillStyle:currentColor});
-            switch(currentBrush){case'spray':for(let i=brushSize*2;i--;){const r=brushSize/2,oX=(Math.random()-.5)*brushSize,oY=(Math.random()-.5)*brushSize;if(Math.sqrt(oX*oX+oY*oY)<=r)ctx.fillRect(cX+oX,cY+oY,1,1);}break;case'ribbon':ctx.beginPath();ctx.moveTo(lastX-brushSize/4,lastY-brushSize/4);ctx.lineTo(cX-brushSize/4,cY-brushSize/4);ctx.stroke();ctx.beginPath();ctx.moveTo(lastX+brushSize/4,lastY+brushSize/4);ctx.lineTo(cX+brushSize/4,cY+brushSize/4);ctx.stroke();break;default:ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(cX,cY);ctx.stroke();break;}
-            [lastX,lastY]=[cX,cY];}
-            function stopDrawing(){isDrawing=false;ctx.beginPath();}
-            
-            canvas.addEventListener('mousedown',startDrawing);canvas.addEventListener('mousemove',draw);canvas.addEventListener('mouseup',stopDrawing);canvas.addEventListener('mouseleave',stopDrawing);
-            canvas.addEventListener('touchstart',startDrawing,{passive:false});canvas.addEventListener('touchmove',draw,{passive:false});canvas.addEventListener('touchend',stopDrawing);
-            clearBtn.addEventListener('click',clearCanvas);
-            brushSizeSlider.addEventListener('input',(e)=>(sizeDisplay.textContent=brushSize=e.target.value));
-            brushTypeSelector.addEventListener('change',(e)=>(currentBrush=e.target.value));
-            
-            function drawTextOntoCanvas(text){ctx.fillStyle="#000000";ctx.font="16px sans-serif";const words=text.split(/(\s+)/);let line='';let y=30;const x=15;const maxWidth=canvas.width-(x*2);for(const word of words){const testLine=line+word;const metrics=ctx.measureText(testLine);if(metrics.width>maxWidth&&line.length>0){ctx.fillText(line,x,y);line=word.trimStart();y+=20;}else{line=testLine;}}ctx.fillText(line,x,y);}
-            
-            okModalBtn.addEventListener('click', () => saveModalOverlay.style.display='none');
-            saveBtn.addEventListener('click', () => {
-                let filename=filenameInput.value.trim();if(!filename){showOSDialog("Please enter a filename.");return;}
-                if(!filename.toLowerCase().endsWith('.art')){filename+='.art';filenameInput.value=filename;}
-                
-                const imageData = canvas.toDataURL('image/png');
-                const artFileObject = {
-                    fileType: "axOS.Paint.Art",
-                    version: "1.0",
-                    createdAt: new Date().toISOString(),
-                    imageData: imageData
-                };
-                const fileContent = JSON.stringify(artFileObject, null, 2); // Pretty-print JSON
-
-                saveStatusMessage.textContent='Saving...'; okModalBtn.style.display='none';
-                saveModalOverlay.style.display='flex';
-                saveFile(filename, fileContent, (response)=>{
-                    saveStatusMessage.textContent = response.success ? `'${filename}' saved!` : `Error saving file.`;
-                    okModalBtn.style.display='inline-block';
+        function createPalette() {
+            colors.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                swatch.addEventListener('click', () => {
+                    currentColor = color;
+                    isEraser = false;
+                    penToolBtn.classList.add('active');
+                    eraserToolBtn.classList.remove('active');
+                    
+                    document.querySelectorAll('.color-swatch.active').forEach(s => s.classList.remove('active'));
+                    swatch.classList.add('active');
                 });
+                paletteContainer.appendChild(swatch);
             });
+            paletteContainer.firstChild.classList.add('active');
+        }
 
-            function initializeApp(){
-                const artIcon='data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/><path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="75" r="8" fill="#007bff"/></svg>`);
-                registerFileType('art',window.location.href,'axOS Paint Drawing',artIcon);
-                const txtIcon='data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#fff" stroke="#bbb" stroke-width="2"/><path d="M25 30h50 M25 45h50 M25 60h30" stroke="#555" stroke-width="4" stroke-linecap="round"/></svg>`);
-                registerFileType('txt',window.location.href,'Text Document',txtIcon);
-            }
-            initializeApp();
-            window.dispatchEvent(new Event('resize')); // Initial resize to set canvas dimensions correctly
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
         });
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseout', () => isDrawing = false);
+
+        brushSizeSlider.addEventListener('input', (e) => {
+            brushSizeLabel.textContent = e.target.value;
+            ctx.lineWidth = e.target.value;
+        });
+
+        clearButton.addEventListener('click', () => {
+             ctx.fillStyle = '#FFFFFF';
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+        
+        saveButton.addEventListener('click', () => {
+            const filename = filenameInput.value || 'untitled.art';
+            const dataUrl = canvas.toDataURL('image/png'); // This is a Base64 string
+            axOS.saveFile(filename, dataUrl);
+        });
+
+        penToolBtn.addEventListener('click', () => {
+            isEraser = false;
+            penToolBtn.classList.add('active');
+            eraserToolBtn.classList.remove('active');
+        });
+        
+        eraserToolBtn.addEventListener('click', () => {
+            isEraser = true;
+            eraserToolBtn.classList.add('active');
+            penToolBtn.classList.remove('active');
+        });
+
+        roundBrushBtn.addEventListener('click', () => {
+            ctx.lineCap = 'round';
+            roundBrushBtn.classList.add('active');
+            squareBrushBtn.classList.remove('active');
+        });
+        
+        squareBrushBtn.addEventListener('click', () => {
+            ctx.lineCap = 'square';
+            squareBrushBtn.classList.add('active');
+            roundBrushBtn.classList.remove('active');
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Initialize
+        createPalette();
+        resizeCanvas();
+        ctx.lineCap = 'round';
+        penToolBtn.classList.add('active');
+        roundBrushBtn.classList.add('active');
+
     </script>
 </body>
 </html>
