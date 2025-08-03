@@ -3,247 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online</title>
-    <!--
-        Online Portal by AI
-        A full-screen, single-file application with live news and multiple games.
+    <title>GameSpot</title>
+    <!-- 
+        GameSpot Portal by AI - v2
+        A modern, dark-mode, single-file gaming application.
+        - Fixed navigation bug.
+        - Added Connect Four.
+        - Removed non-game tools.
     -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
     <style>
         :root {
-            --onl-blue: #003399;
-            --onl-yellow: #ffcc00;
-            --onl-bg: #e6e6e6;
-            --onl-panel-bg: #d4d0c8;
-            --onl-white: #ffffff;
-            --onl-black: #000000;
+            --bg-dark: #12121f;
+            --primary-surface: #1e1e32;
+            --primary-accent: #8A2BE2; /* Violet */
+            --secondary-accent: #4a00e0; /* Blue-Violet */
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0b0;
+            --border-color: #33334f;
+            --player1-color: #ffc107; /* Yellow */
+            --player2-color: #f44336; /* Red */
         }
 
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; width: 100%; overflow: hidden; font-family: 'Poppins', sans-serif; background-color: var(--bg-dark); color: var(--text-primary); }
+        .app-container { display: flex; height: 100%; }
 
-        #online-container {
-            width: 100%;
-            height: 100%;
-            background-color: var(--onl-bg);
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- Toolbar --- */
-        #online-toolbar {
-            background-color: var(--onl-blue);
-            color: var(--onl-white);
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            border-bottom: 3px solid var(--onl-yellow);
-            flex-shrink: 0;
-        }
-
-        #online-logo {
-            font-weight: bold;
-            font-style: italic;
-            font-size: 28px;
-            color: var(--onl-yellow);
-        }
-        
-        /* --- Main Content Area --- */
-        #online-main {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden;
-        }
-
+        /* --- Sidebar --- */
         #sidebar {
-            width: 220px;
-            background-color: var(--onl-panel-bg);
-            padding: 15px 10px;
-            border-right: 2px inset var(--onl-black);
+            width: 240px;
+            background-color: var(--primary-surface);
+            padding: 25px 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            border-right: 1px solid var(--border-color);
             flex-shrink: 0;
         }
-        
-        .sidebar-header {
-            font-size: 22px;
-            margin: 10px 0;
-            text-align: center;
-            color: var(--onl-blue);
-            font-weight: bold;
+        #logo {
+            font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 30px;
+            background: linear-gradient(45deg, var(--primary-accent), var(--secondary-accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
+        .sidebar-header { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 10px; }
+        #nav-list { list-style: none; }
+        .nav-item a {
+            display: flex; align-items: center; gap: 15px; padding: 12px 15px; text-decoration: none;
+            color: var(--text-secondary); border-radius: 8px; transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .nav-item a:hover { background-color: #2a2a4a; color: var(--text-primary); }
+        .nav-item a.active { background: linear-gradient(90deg, var(--secondary-accent), var(--primary-accent)); color: var(--text-primary); font-weight: 600; }
+        .nav-item .icon { width: 20px; text-align: center; }
 
-        .channel-btn {
-            background-color: var(--onl-panel-bg);
-            border: 2px outset var(--onl-white);
-            font-size: 16px;
-            font-weight: bold;
-            padding: 8px 10px;
-            cursor: pointer;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            position: relative;
-        }
-        .channel-btn:active, .channel-btn.active {
-            border-style: inset;
-            background-color: #c0c0c0;
-        }
-        .channel-btn .icon { font-size: 20px; width: 25px; text-align: center; }
+        /* --- Content Area --- */
+        #content-area { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .channel-content { display: none; }
+        .channel-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        #content-area {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .channel-content { display: none; flex-grow: 1; overflow-y: auto; padding: 15px; background: var(--onl-white); border: 2px inset #808080; animation: fadeIn 0.3s; }
-        .channel-content.active { display: flex; flex-direction: column;}
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .content-header {
-            background-color: var(--onl-blue);
-            color: var(--onl-yellow);
-            padding: 5px 10px;
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 15px;
-            flex-shrink: 0;
-        }
-        
-        .onl-panel {
-            background-color: var(--onl-bg);
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 2px outset var(--onl-white);
-        }
-        .game-status { text-align:center; font-weight: bold; margin-top: 10px; min-height: 20px;}
-
-        /* --- Welcome Screen --- */
-        .action-button { display: inline-flex; align-items: center; gap: 15px; font-size: 24px; padding: 15px 25px; margin-top: 20px; border: 3px outset var(--onl-white); background-color: var(--onl-yellow); color: var(--onl-blue); font-weight: bold; cursor: pointer; }
-        .action-button:active { border-style: inset; }
-        
-        /* --- News Channel --- */
-        .news-article h4 { color: var(--onl-blue); margin-bottom: 5px; }
-        .news-article a { color: var(--onl-blue); text-decoration: none; }
-        .news-article a:hover { text-decoration: underline; }
-        .news-article p { font-size: 14px; line-height: 1.4; color: #333; margin-top: 0; }
+        .game-panel { background-color: var(--primary-surface); padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); }
+        h1 { font-size: 2.5rem; font-weight: 600; margin-bottom: 20px; }
+        h2 { font-weight: 600; margin-bottom: 20px; }
+        #welcome-channel .game-panel { text-align: center; }
+        .game-status { text-align:center; color: var(--text-secondary); margin-top: 15px; min-height: 24px; font-size: 1.1rem;}
+        .game-canvas { display: block; margin: auto; background-color: var(--bg-dark); border-radius: 8px; }
 
         /* --- Game Styles --- */
-        #ttt-board { display: grid; grid-template-columns: repeat(3, 80px); grid-gap: 5px; justify-content: center; }
-        .ttt-cell { width: 80px; height: 80px; border: 2px outset #fff; display: flex; align-items: center; justify-content: center; font-size: 50px; cursor: pointer; background: var(--onl-white); }
-
-        #rps-choices button { font-size: 50px; border: none; background: none; cursor: pointer; padding: 10px 20px; }
-
+        #ttt-board { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; justify-content: center; }
+        .ttt-cell { width: 80px; height: 80px; background-color: var(--bg-dark); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        
+        #rps-choices button { font-size: 3.5rem; background: none; border: none; color: var(--text-primary); cursor: pointer; margin: 0 15px; transition: transform 0.2s; }
+        
         #memory-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 400px; margin: auto;}
-        .memory-card { aspect-ratio: 1 / 1; background: var(--onl-blue); border: 2px outset #fff; cursor: pointer; perspective: 1000px; }
+        .memory-card { aspect-ratio: 1; background: linear-gradient(135deg, var(--secondary-accent), var(--primary-accent)); border-radius: 8px; cursor: pointer; perspective: 1000px; }
         .memory-card .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .memory-card.is-flipped .card-inner { transform: rotateY(180deg); }
-        .memory-card.is-matched { opacity: 0.5; }
-        .memory-card .front, .memory-card .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 40px;}
-        .memory-card .back { transform: rotateY(180deg); }
-        
-        #snake-canvas { background-color: #9ead86; border: 2px inset #808080; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;}
+        .memory-card.is-matched { opacity: 0.3; }
+        .memory-card .front, .memory-card .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 8px; }
+        .memory-card .back { background: var(--primary-surface); }
 
-        #paint-canvas { border: 2px inset #808080; cursor: crosshair; background-color: var(--onl-white); }
-        .color-swatch { width: 25px; height: 25px; border: 2px outset var(--onl-white); cursor: pointer; display: inline-block; }
+        #connectfour-board {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            background-color: var(--primary-accent); padding: 10px;
+            border-radius: 10px; width: fit-content; margin: auto;
+        }
+        .connectfour-slot {
+            width: 60px; height: 60px;
+            margin: 5px; border-radius: 50%;
+            background-color: var(--bg-dark);
+            cursor: pointer;
+        }
+        .connectfour-slot.player1 { background-color: var(--player1-color); }
+        .connectfour-slot.player2 { background-color: var(--player2-color); }
+
     </style>
 </head>
 <body>
+    <div class="app-container">
+        <nav id="sidebar">
+            <h1 id="logo">GameSpot</h1>
+            <div class="sidebar-header">Home</div>
+            <ul id="nav-list">
+                <li class="nav-item"><a href="#" class="active" data-channel="welcome-channel"><i class="icon fa-solid fa-house"></i> Welcome</a></li>
+            </ul>
+            <div class="sidebar-header">Games</div>
+            <ul id="nav-list">
+                <li class="nav-item"><a href="#" data-channel="connectfour-channel"><i class="icon fa-solid fa-braille"></i> Connect Four</a></li>
+                <li class="nav-item"><a href="#" data-channel="breakout-channel"><i class="icon fa-solid fa-table-tennis-paddle-ball"></i> Breakout</a></li>
+                <li class="nav-item"><a href="#" data-channel="snake-channel"><i class="icon fa-solid fa-staff-snake"></i> Snake '98</a></li>
+                <li class="nav-item"><a href="#" data-channel="tictactoe-channel"><i class="icon fa-solid fa-hashtag"></i> Tic-Tac-Toe</a></li>
+                <li class="nav-item"><a href="#" data-channel="rps-channel"><i class="icon fa-solid fa-hand-scissors"></i> Rock Paper Scissors</a></li>
+                <li class="nav-item"><a href="#" data-channel="memory-channel"><i class="icon fa-solid fa-brain"></i> Memory Match</a></li>
+            </ul>
+        </nav>
 
-    <div id="online-container">
-        <header id="online-toolbar">
-            <div id="online-logo">Online</div>
-        </header>
-
-        <main id="online-main">
-            <nav id="sidebar">
-                <div class="sidebar-header">Channels</div>
-                <button class="channel-btn active" data-channel="welcome-channel"><span class="icon">🏠</span> Welcome</button>
-                <button class="channel-btn" data-channel="news-channel"><span class="icon">📰</span> Today's News</button>
-                
-                <div class="sidebar-header">Games</div>
-                <button class="channel-btn" data-channel="tictactoe-channel"><span class="icon">⭕</span> Tic-Tac-Toe</button>
-                <button class="channel-btn" data-channel="rps-channel"><span class="icon">✊</span> Rock Paper Scissors</button>
-                <button class="channel-btn" data-channel="memory-channel"><span class="icon">🧠</span> Memory Match</button>
-                <button class="channel-btn" data-channel="snake-channel"><span class="icon">🐍</span> Snake '98</button>
-                <button class="channel-btn" data-channel="painter-channel"><span class="icon">🎨</span> Pixel Painter</button>
-            </nav>
-
-            <section id="content-area">
-                <!-- Welcome Channel -->
-                <div id="welcome-channel" class="channel-content active" style="align-items: center; justify-content: center; text-align: center;">
-                    <h1>Hello.</h1>
-                    <p>Select a channel from the menu to begin your journey.</p>
-                    <button class="action-button" id="go-to-news-btn">
-                        <span>📰</span> Read Today's News
-                    </button>
-                </div>
-
-                <!-- News Channel -->
-                <div id="news-channel" class="channel-content">
-                    <div class="content-header">Online News Service</div>
-                    <div class="onl-panel" style="flex-grow: 1; overflow-y: auto;">
-                        <div id="news-feed">Click "Today's News" to load stories!</div>
-                    </div>
-                </div>
-
-                <!-- Tic-Tac-Toe Channel -->
-                <div id="tictactoe-channel" class="channel-content">
-                    <div class="content-header">Game: Tic-Tac-Toe</div>
-                    <div class="onl-panel"><div id="ttt-board"></div><p id="ttt-status" class="game-status"></p></div>
-                </div>
-                
-                <!-- Rock Paper Scissors Channel -->
-                <div id="rps-channel" class="channel-content">
-                    <div class="content-header">Game: Rock, Paper, Scissors</div>
-                     <div class="onl-panel" style="text-align:center;">
-                        <div id="rps-choices">
-                            <button data-choice="rock">✊</button><button data-choice="paper">✋</button><button data-choice="scissors">✌️</button>
-                        </div>
-                        <p id="rps-result" class="game-status">Choose your hand!</p>
-                    </div>
-                </div>
-
-                <!-- Memory Match Channel -->
-                <div id="memory-channel" class="channel-content">
-                    <div class="content-header">Game: Memory Match</div>
-                     <div class="onl-panel"><div id="memory-board"></div><p id="memory-status" class="game-status">Moves: 0</p></div>
-                </div>
-                
-                <!-- Snake '98 Channel -->
-                <div id="snake-channel" class="channel-content">
-                    <div class="content-header">Game: Snake '98</div>
-                    <div class="onl-panel" style="text-align:center;">
-                        <p class="game-status">Score: <span id="snake-score">0</span></p>
-                        <canvas id="snake-canvas" width="400" height="400"></canvas>
-                        <p>Use Arrow Keys to move.</p>
-                    </div>
-                </div>
-
-                <!-- Pixel Painter Channel -->
-                <div id="painter-channel" class="channel-content">
-                    <div class="content-header">Tool: Pixel Painter</div>
-                     <div class="onl-panel">
-                        <canvas id="paint-canvas" width="600" height="450"></canvas>
-                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                            Colors:
-                            <div class="color-swatch active" style="background: black;" data-color="black"></div>
-                            <div class="color-swatch" style="background: red;" data-color="red"></div>
-                            <div class="color-swatch" style="background: blue;" data-color="blue"></div>
-                            <div class="color-swatch" style="background: green;" data-color="green"></div>
-                        </div>
-                    </div>
-                </div>
-
+        <main id="content-area">
+            <!-- Welcome Channel -->
+            <section id="welcome-channel" class="channel-content active">
+                <h1>Welcome to GameSpot</h1>
+                <div class="game-panel"><p>Select a game from the sidebar to start playing.</p></div>
             </section>
+            
+            <!-- New Connect Four Channel -->
+            <section id="connectfour-channel" class="channel-content">
+                <h2>Strategy: Connect Four</h2>
+                <div class="game-panel">
+                    <div id="connectfour-board"></div>
+                    <p class="game-status" id="connectfour-status">Player 1's Turn</p>
+                </div>
+            </section>
+
+            <!-- Existing Game Channels -->
+            <section id="breakout-channel" class="channel-content"><h2>Arcade: Breakout</h2><div class="game-panel"><canvas id="breakout-canvas" class="game-canvas" width="800" height="500"></canvas><p class="game-status" id="breakout-status">Move your mouse to control the paddle.</p></div></section>
+            <section id="snake-channel" class="channel-content"><h2>Arcade: Snake '98</h2><div class="game-panel" style="text-align:center;"><p class="game-status">Score: <span id="snake-score">0</span></p><canvas id="snake-canvas" style="background-color:#9ead86;" class="game-canvas" width="400" height="400"></canvas><p style="margin-top:10px;">Use Arrow Keys to move.</p></div></section>
+            <section id="tictactoe-channel" class="channel-content"><h2>Strategy: Tic-Tac-Toe</h2><div class="game-panel"><div id="ttt-board"></div><p id="ttt-status" class="game-status"></p></div></section>
+            <section id="rps-channel" class="channel-content"><h2>Fun: Rock, Paper, Scissors</h2><div class="game-panel" style="text-align:center;"><div id="rps-choices"><button data-choice="rock">✊</button><button data-choice="paper">✋</button><button data-choice="scissors">✌️</button></div><p id="rps-result" class="game-status">Choose your hand!</p></div></section>
+            <section id="memory-channel" class="channel-content"><h2>Puzzle: Memory Match</h2><div class="game-panel"><div id="memory-board"></div><p id="memory-status" class="game-status">Moves: 0</p></div></section>
         </main>
     </div>
 
@@ -251,150 +148,193 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- NAVIGATION ---
-    const channelButtons = document.querySelectorAll('.channel-btn');
+    const navLinks = document.querySelectorAll('.nav-item a');
     const contentPanels = document.querySelectorAll('.channel-content');
-    let newsFetched = false;
-    let currentChannel = 'welcome-channel';
+    let currentGameLoop = null;
 
-    function showChannel(channelId, forceReset = false) {
-        if (channelId === currentChannel && !forceReset) return;
-        currentChannel = channelId;
+    function showChannel(channelId) {
+        if (currentGameLoop) {
+            cancelAnimationFrame(currentGameLoop);
+            clearInterval(currentGameLoop); // For setInterval based games like Snake
+            currentGameLoop = null;
+        }
 
         contentPanels.forEach(panel => panel.classList.remove('active'));
-        channelButtons.forEach(btn => btn.classList.remove('active'));
+        navLinks.forEach(link => link.classList.remove('active'));
         
         document.getElementById(channelId).classList.add('active');
-        document.querySelector(`.channel-btn[data-channel="${channelId}"]`).classList.add('active');
+        document.querySelector(`.nav-item a[data-channel="${channelId}"]`).classList.add('active');
         
         if (channelId === 'tictactoe-channel') tttInit();
         if (channelId === 'memory-channel') memoryInit();
-        if (channelId === 'painter-channel') painterInit();
         if (channelId === 'snake-channel') snakeInit();
-        if (channelId === 'news-channel' && !newsFetched) fetchNews();
+        if (channelId === 'breakout-channel') breakoutInit();
+        if (channelId === 'connectfour-channel') connectFourInit();
     }
 
-    channelButtons.forEach(button => {
-        button.addEventListener('click', (e) => showChannel(e.currentTarget.dataset.channel));
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            showChannel(e.currentTarget.dataset.channel);
+        });
     });
-
-    document.getElementById('go-to-news-btn').addEventListener('click', () => showChannel('news-channel'));
-
-    // --- NEWS FETCHER ---
-    async function fetchNews() {
-        const newsFeed = document.getElementById('news-feed');
-        newsFeed.innerHTML = '<p>Loading latest news...</p>';
-        const rssUrl = 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.dogonews.com%2Frss%2Fall-stories';
-        try {
-            const response = await fetch(rssUrl);
-            const data = await response.json();
-            if (data.status === 'ok') {
-                newsFeed.innerHTML = '';
-                data.items.slice(0, 10).forEach(item => {
-                    const article = document.createElement('div');
-                    article.className = 'news-article';
-                    const cleanDescription = item.description.replace(/<[^>]*>?/gm, '');
-                    article.innerHTML = `<h4><a href="${item.link}" target="_blank">${item.title}</a></h4><p>${cleanDescription.substring(0, 150)}...</p>`;
-                    newsFeed.appendChild(article);
-                });
-                newsFetched = true;
-            } else { throw new Error('API status not ok'); }
-        } catch (error) {
-            newsFeed.innerHTML = '<p>Sorry, could not load the news right now.</p>';
-        }
-    }
     
     // --- GAME LOGIC ---
 
-    // Tic-Tac-Toe
-    const tttBoard = document.getElementById('ttt-board'), tttStatus = document.getElementById('ttt-status');
-    let ttt_currentPlayer, ttt_gameState, ttt_active;
-    function tttInit() {
-        tttBoard.innerHTML = '';
-        for (let i=0; i<9; i++) tttBoard.insertAdjacentHTML('beforeend', `<div class="ttt-cell" data-index="${i}"></div>`);
-        tttBoard.querySelectorAll('.ttt-cell').forEach(c => c.addEventListener('click', tttHandleClick));
-        ttt_currentPlayer='X'; ttt_gameState=Array(9).fill(null); ttt_active=true;
-        tttStatus.textContent = `Player X's turn`;
+    // Connect Four
+    const cfBoard = document.getElementById('connectfour-board');
+    const cfStatus = document.getElementById('connectfour-status');
+    const cfRows = 6, cfCols = 7;
+    let cfPlayer, cfGameState, cfActive;
+    
+    function connectFourInit() {
+        cfBoard.innerHTML = '';
+        cfPlayer = 1;
+        cfActive = true;
+        cfGameState = Array(cfRows).fill(null).map(() => Array(cfCols).fill(0));
+        cfStatus.textContent = "Player 1's Turn";
+        
+        for (let r = 0; r < cfRows; r++) {
+            for (let c = 0; c < cfCols; c++) {
+                const slot = document.createElement('div');
+                slot.classList.add('connectfour-slot');
+                slot.dataset.row = r;
+                slot.dataset.col = c;
+                cfBoard.appendChild(slot);
+            }
+        }
+        cfBoard.addEventListener('click', handleCFClick);
     }
-    function tttHandleClick(e) {
-        const i=e.target.dataset.index;
-        if(ttt_gameState[i]||!ttt_active)return; ttt_gameState[i]=ttt_currentPlayer;e.target.textContent=ttt_currentPlayer;
-        const wc=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-        if(wc.some(c=>c.every(i=>ttt_gameState[i]===ttt_currentPlayer))){tttStatus.textContent=`Player ${ttt_currentPlayer} wins!`;ttt_active=false}
-        else if(!ttt_gameState.includes(null)){tttStatus.textContent='Draw!';ttt_active=false}
-        else{ttt_currentPlayer=ttt_currentPlayer==='X'?'O':'X';tttStatus.textContent=`Player ${ttt_currentPlayer}'s turn`}
+    
+    function handleCFClick(e) {
+        if (!cfActive || !e.target.classList.contains('connectfour-slot')) return;
+        const col = parseInt(e.target.dataset.col);
+        
+        for (let r = cfRows - 1; r >= 0; r--) {
+            if (cfGameState[r][col] === 0) {
+                cfGameState[r][col] = cfPlayer;
+                const slot = cfBoard.querySelector(`[data-row='${r}'][data-col='${col}']`);
+                slot.classList.add(`player${cfPlayer}`);
+                if (checkCFWin(r, col)) {
+                    cfStatus.textContent = `Player ${cfPlayer} wins!`;
+                    cfActive = false;
+                } else {
+                    cfPlayer = cfPlayer === 1 ? 2 : 1;
+                    cfStatus.textContent = `Player ${cfPlayer}'s Turn`;
+                }
+                return;
+            }
+        }
+    }
+    
+    function checkCFWin(r, c) {
+        const p = cfPlayer;
+        function checkDirection(dr, dc) {
+            let count = 0;
+            for (let i = -3; i <= 3; i++) {
+                const row = r + i * dr, col = c + i * dc;
+                if (row >= 0 && row < cfRows && col >= 0 && col < cfCols && cfGameState[row][col] === p) {
+                    count++;
+                    if (count >= 4) return true;
+                } else {
+                    count = 0;
+                }
+            }
+            return false;
+        }
+        return checkDirection(0, 1) || checkDirection(1, 0) || checkDirection(1, 1) || checkDirection(1, -1);
     }
 
-    // Rock, Paper, Scissors
-    document.querySelectorAll('#rps-choices button').forEach(b => b.addEventListener('click', () => {
-        const pC=b.dataset.choice, cC=['rock','paper','scissors'][Math.floor(Math.random()*3)];
-        let r; if(pC===cC)r='Tie!'; else if((pC==='rock'&&cC==='scissors')||(pC==='paper'&&cC==='rock')||(pC==='scissors'&&cC==='paper'))r='You win!'; else r='You lose!';
-        document.getElementById('rps-result').textContent = `You: ${pC}, PC: ${cC}. ${r}`;
-    }));
+    // Breakout
+    const breakoutCanvas = document.getElementById('breakout-canvas');
+    const breakoutCtx = breakoutCanvas.getContext('2d');
+    let ball, paddle, bricks, breakoutScore, lives;
+    function breakoutInit() {
+        document.getElementById('breakout-status').textContent = 'Move your mouse to control the paddle.';
+        paddle = { x: breakoutCanvas.width / 2 - 50, y: breakoutCanvas.height - 20, width: 100, height: 10, dx: 7 };
+        ball = { x: breakoutCanvas.width / 2, y: breakoutCanvas.height / 2, radius: 10, dx: 4, dy: -4 };
+        bricks = [];
+        const brickRowCount = 5, brickColumnCount = 9, brickWidth = 75, brickHeight = 20, brickPadding = 10, brickOffsetTop = 30, brickOffsetLeft = 30;
+        breakoutScore = 0; lives = 3;
+        for (let c = 0; c < brickColumnCount; c++) { bricks[c] = []; for (let r = 0; r < brickRowCount; r++) { bricks[c][r] = { x: 0, y: 0, status: 1 }; } }
+        
+        function draw() {
+            if (!currentGameLoop) return;
+            breakoutCtx.clearRect(0, 0, breakoutCanvas.width, breakoutCanvas.height);
+            // Draw Bricks
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    if (bricks[c][r].status === 1) {
+                        const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                        const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                        bricks[c][r].x = brickX; bricks[c][r].y = brickY;
+                        breakoutCtx.beginPath(); breakoutCtx.rect(brickX, brickY, brickWidth, brickHeight); breakoutCtx.fillStyle = `hsl(${r * 30}, 70%, 50%)`; breakoutCtx.fill(); breakoutCtx.closePath();
+                    }
+                }
+            }
+            // Draw Ball, Paddle, Score, Lives
+            breakoutCtx.beginPath(); breakoutCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2); breakoutCtx.fillStyle = '#f0f0f0'; breakoutCtx.fill(); breakoutCtx.closePath();
+            breakoutCtx.beginPath(); breakoutCtx.rect(paddle.x, paddle.y, paddle.width, paddle.height); breakoutCtx.fillStyle = 'var(--primary-accent)'; breakoutCtx.fill(); breakoutCtx.closePath();
+            breakoutCtx.font = '16px Poppins'; breakoutCtx.fillText(`Score: ${breakoutScore}`, 8, 20); breakoutCtx.fillText(`Lives: ${lives}`, breakoutCanvas.width - 65, 20);
+            
+            // Collision Detection
+            for(let c=0; c<brickColumnCount; c++) {
+                for(let r=0; r<brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if(b.status === 1 && ball.x > b.x && ball.x < b.x+brickWidth && ball.y > b.y && ball.y < b.y+brickHeight) {
+                        ball.dy = -ball.dy; b.status = 0; breakoutScore++;
+                        if(breakoutScore === brickRowCount*brickColumnCount) {
+                            document.getElementById('breakout-status').textContent = 'YOU WIN!'; cancelAnimationFrame(currentGameLoop); currentGameLoop = null; return;
+                        }
+                    }
+                }
+            }
 
-    // Memory Match
-    const memoryBoard = document.getElementById('memory-board'), memoryStatus = document.getElementById('memory-status');
-    const cards =['👽','🚀','⭐','🪐','👾','☄️','👽','🚀','⭐','🪐','👾','☄️'];
-    let firstCard, secondCard, lockBoard, moves;
-    function memoryInit() {
-        memoryBoard.innerHTML=''; moves=0; memoryStatus.textContent='Moves: 0';
-        cards.sort(()=>0.5-Math.random()).forEach(item=>{
-            const card=`<div class="memory-card" data-value="${item}"><div class="card-inner"><div class="front">?</div><div class="back">${item}</div></div></div>`;
-            memoryBoard.insertAdjacentHTML('beforeend', card);
-        });
-        document.querySelectorAll('.memory-card').forEach(c=>c.addEventListener('click', flipCard));
+            if (ball.x + ball.dx > breakoutCanvas.width - ball.radius || ball.x + ball.dx < ball.radius) ball.dx = -ball.dx;
+            if (ball.y + ball.dy < ball.radius) ball.dy = -ball.dy;
+            else if (ball.y + ball.dy > breakoutCanvas.height - ball.radius) {
+                if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) ball.dy = -ball.dy;
+                else {
+                    lives--;
+                    if (!lives) { document.getElementById('breakout-status').textContent = 'GAME OVER. Click Breakout again to retry.'; cancelAnimationFrame(currentGameLoop); currentGameLoop = null; return; }
+                    else { ball.x = breakoutCanvas.width / 2; ball.y = breakoutCanvas.height - 30; ball.dx = 4; ball.dy = -4; paddle.x = (breakoutCanvas.width - paddle.width) / 2; }
+                }
+            }
+            ball.x += ball.dx; ball.y += ball.dy;
+            currentGameLoop = requestAnimationFrame(draw);
+        }
+        function movePaddle(e) { const relativeX = e.clientX - breakoutCanvas.getBoundingClientRect().left; if (relativeX > 0 && relativeX < breakoutCanvas.width) paddle.x = relativeX - paddle.width / 2; }
+        breakoutCanvas.addEventListener('mousemove', movePaddle);
+        currentGameLoop = requestAnimationFrame(draw);
     }
-    function flipCard() {
-        if(lockBoard||this===firstCard||this.classList.contains('is-matched'))return; this.classList.add('is-flipped');
-        if(!firstCard){firstCard=this;return} secondCard=this; moves++; memoryStatus.textContent=`Moves: ${moves}`; lockBoard=true;
-        firstCard.dataset.value===secondCard.dataset.value?disableCards():unflipCards();
-    }
+    
+    // Tic-Tac-Toe (Restored full logic)
+    const tttBoard=document.getElementById('ttt-board'), tttStatus=document.getElementById('ttt-status');
+    let ttt_cp, ttt_gs, ttt_a;
+    function tttInit(){tttBoard.innerHTML='';for(let i=0;i<9;i++)tttBoard.insertAdjacentHTML('beforeend',`<div class="ttt-cell" data-index="${i}"></div>`);tttBoard.querySelectorAll('.ttt-cell').forEach(c=>c.addEventListener('click',tttHandleClick));ttt_cp='X';ttt_gs=Array(9).fill(null);ttt_a=true;tttStatus.textContent=`Player X's turn`}
+    function tttHandleClick(e){const i=e.target.dataset.index;if(ttt_gs[i]||!ttt_a)return;ttt_gs[i]=ttt_cp;e.target.textContent=ttt_cp;const wc=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];if(wc.some(c=>c.every(i=>ttt_gs[i]===ttt_cp))){tttStatus.textContent=`Player ${ttt_cp} wins!`;ttt_a=false}else if(!ttt_gs.includes(null)){tttStatus.textContent='Draw!';ttt_a=false}else{ttt_cp=ttt_cp==='X'?'O':'X';tttStatus.textContent=`Player ${ttt_cp}'s turn`}}
+    
+    // Rock Paper Scissors (Restored full logic)
+    document.querySelectorAll('#rps-choices button').forEach(b=>b.addEventListener('click',()=>{const pC=b.dataset.choice,cC=['rock','paper','scissors'][Math.floor(Math.random()*3)];let r;if(pC===cC)r='Tie!';else if((pC==='rock'&&cC==='scissors')||(pC==='paper'&&cC==='rock')||(pC==='scissors'&&cC==='paper'))r='You win!';else r='You lose!';document.getElementById('rps-result').textContent=`You: ${pC}, PC: ${cC}. ${r}`}));
+    
+    // Memory Match (Restored full logic)
+    const memoryBoard=document.getElementById('memory-board'),memoryStatus=document.getElementById('memory-status');const cards=['👽','🚀','⭐','🪐','👾','☄️','👽','🚀','⭐','🪐','👾','☄️'];let firstCard,secondCard,lockBoard,moves;
+    function memoryInit(){memoryBoard.innerHTML='';moves=0;memoryStatus.textContent='Moves: 0';cards.sort(()=>0.5-Math.random()).forEach(item=>{const card=`<div class="memory-card" data-value="${item}"><div class="card-inner"><div class="front"></div><div class="back">${item}</div></div></div>`;memoryBoard.insertAdjacentHTML('beforeend',card)});document.querySelectorAll('.memory-card').forEach(c=>c.addEventListener('click',flipCard))}
+    function flipCard(){if(lockBoard||this===firstCard||this.classList.contains('is-matched'))return;this.classList.add('is-flipped');if(!firstCard){firstCard=this;return}secondCard=this;moves++;memoryStatus.textContent=`Moves: ${moves}`;lockBoard=true;firstCard.dataset.value===secondCard.dataset.value?disableCards():unflipCards()}
     function disableCards(){firstCard.classList.add('is-matched');secondCard.classList.add('is-matched');if(document.querySelectorAll('.is-matched').length===cards.length)memoryStatus.textContent=`You won in ${moves} moves!`;resetBoard()}
-    function unflipCards(){setTimeout(()=>{firstCard.classList.remove('is-flipped');secondCard.classList.remove('is-flipped');resetBoard()},1200)}
+    function unflipCards(){setTimeout(()=>{firstCard.classList.remove('is-flipped');secondCard.classList.remove('is-flipped');resetBoard()},1000)}
     function resetBoard(){[firstCard,secondCard,lockBoard]=[null,null,false]}
     
-    // Snake '98
-    const snakeCanvas=document.getElementById('snake-canvas'), snakeCtx=snakeCanvas.getContext('2d');
-    const snakeScoreEl=document.getElementById('snake-score'), gridSize=20;
-    let snake, food, score, direction, gameLoop;
-    function snakeInit() {
-        if(gameLoop) clearInterval(gameLoop);
-        snake=[{x:10,y:10}]; food={}; score=0; direction='right';
-        snakeScoreEl.textContent=0; placeFood();
-        gameLoop=setInterval(updateSnake,150);
-    }
+    // Snake '98 (Restored full logic)
+    const snakeCanvas=document.getElementById('snake-canvas'),snakeCtx=snakeCanvas.getContext('2d');const snakeScoreEl=document.getElementById('snake-score'),gridSize=20;let snake,food,score,direction;
+    function snakeInit(){if(currentGameLoop)clearInterval(currentGameLoop);snake=[{x:10,y:10}];food={};score=0;direction='right';snakeScoreEl.textContent=0;placeFood();currentGameLoop=setInterval(updateSnake,150)}
     function placeFood(){food={x:Math.floor(Math.random()*gridSize),y:Math.floor(Math.random()*gridSize)}}
-    function updateSnake() {
-        const head={...snake[0]};
-        if(direction==='up')head.y--;if(direction==='down')head.y++;if(direction==='left')head.x--;if(direction==='right')head.x++;
-        if(head.x<0||head.x>=gridSize||head.y<0||head.y>=gridSize||snake.some(p=>p.x===head.x&&p.y===head.y)){clearInterval(gameLoop);return}
-        snake.unshift(head);
-        if(head.x===food.x&&head.y===food.y){score++;snakeScoreEl.textContent=score;placeFood()}else{snake.pop()}
-        drawSnake();
-    }
-    function drawSnake(){
-        snakeCtx.fillStyle='#9ead86'; snakeCtx.fillRect(0,0,snakeCanvas.width,snakeCanvas.height);
-        snakeCtx.fillStyle='black';
-        snake.forEach(p=>snakeCtx.fillRect(p.x*gridSize,p.y*gridSize,gridSize-1,gridSize-1));
-        snakeCtx.fillStyle='darkred'; snakeCtx.fillRect(food.x*gridSize,food.y*gridSize,gridSize-1,gridSize-1);
-    }
-    document.addEventListener('keydown',e=>{
-        const goingUp=direction==='up',goingDown=direction==='down',goingLeft=direction==='left',goingRight=direction==='right';
-        if(e.key==='ArrowUp'&&!goingDown)direction='up';if(e.key==='ArrowDown'&&!goingUp)direction='down';
-        if(e.key==='ArrowLeft'&&!goingRight)direction='left';if(e.key==='ArrowRight'&&!goingLeft)direction='right';
-    });
+    function updateSnake(){const head={...snake[0]};if(direction==='up')head.y--;if(direction==='down')head.y++;if(direction==='left')head.x--;if(direction==='right')head.x++;if(head.x<0||head.x>=gridSize||head.y<0||head.y>=gridSize||snake.some(p=>p.x===head.x&&p.y===head.y)){clearInterval(currentGameLoop);currentGameLoop=null;return}snake.unshift(head);if(head.x===food.x&&head.y===food.y){score++;snakeScoreEl.textContent=score;placeFood()}else{snake.pop()}drawSnake()}
+    function drawSnake(){snakeCtx.fillStyle='#9ead86';snakeCtx.fillRect(0,0,snakeCanvas.width,snakeCanvas.height);snakeCtx.fillStyle='black';snake.forEach(p=>snakeCtx.fillRect(p.x*gridSize,p.y*gridSize,gridSize-1,gridSize-1));snakeCtx.fillStyle='darkred';snakeCtx.fillRect(food.x*gridSize,food.y*gridSize,gridSize-1,gridSize-1)}
+    document.addEventListener('keydown',e=>{const gU=direction==='up',gD=direction==='down',gL=direction==='left',gR=direction==='right';if(e.key==='ArrowUp'&&!gD)direction='up';if(e.key==='ArrowDown'&&!gU)direction='down';if(e.key==='ArrowLeft'&&!gR)direction='left';if(e.key==='ArrowRight'&&!gL)direction='right';});
 
-    // Pixel Painter
-    const paintCanvas=document.getElementById('paint-canvas'), paintCtx=paintCanvas.getContext('2d');
-    let isPainting=false;
-    function painterInit(){paintCtx.lineWidth=5;paintCtx.lineCap='round';paintCtx.strokeStyle='black';}
-    document.querySelectorAll('.color-swatch').forEach(s=>{s.addEventListener('click',()=>{paintCtx.strokeStyle=s.dataset.color;document.querySelector('.color-swatch.active').classList.remove('active');s.classList.add('active')})});
-    paintCanvas.addEventListener('mousedown',e=>{isPainting=true;draw(e)});
-    paintCanvas.addEventListener('mouseup',()=>{isPainting=false;paintCtx.beginPath()});
-    paintCanvas.addEventListener('mousemove',draw);
-    function draw(e){if(!isPainting)return;const r=paintCanvas.getBoundingClientRect();paintCtx.lineTo(e.clientX-r.left,e.clientY-r.top);paintCtx.stroke();paintCtx.beginPath();paintCtx.moveTo(e.clientX-r.left,e.clientY-r.top)}
-    
-    // INITIALIZE FIRST CHANNEL
-    showChannel('welcome-channel', true);
+    // INITIALIZE
+    showChannel('welcome-channel');
 });
 </script>
 </body>
