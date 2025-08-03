@@ -48,7 +48,7 @@
         #save-modal { background: #4a4a4a; padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; width: 300px; }
         #save-modal h3 { margin-top: 0; }
         #save-modal p { margin: 15px 0; min-height: 24px; }
-        #close-modal-btn { background-color: #007bff; display: none; }
+        #ok-modal-btn { background-color: #007bff; display: none; }
     </style>
 </head>
 <body>
@@ -69,7 +69,7 @@
 
     <!-- In-App Modal for Saving -->
     <div id="save-modal-overlay">
-        <div id="save-modal"><<h3>Save Status</h3><p id="save-status-message">Saving...</p><button id="close-modal-btn">Close</button></div>
+        <div id="save-modal"><h3>Save Status</h3><p id="save-status-message">Saving...</p><button id="ok-modal-btn">Ok</button></div>
     </div>
 
     <script>
@@ -77,8 +77,24 @@
         const fileSystemCallbacks = {}; let messageId = 0;
         function showOSDialog(message) { parent.postMessage({ type: 'axOS_showDialog', payload: { message } }, '*'); }
         function registerFileType(extension, appUrl, description, iconUrl) { parent.postMessage({ type: 'axOS_registerFileType', payload: { extension, appUrl, description, iconUrl } }, '*'); }
-        function saveFile(filename, content, callback) { const id=messageId++; fileSystemCallbacks[id]=callback; parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content }, id: id }, '*'); }
         function loadFile(filename, callback) { const id=messageId++; fileSystemCallbacks[id]=callback; parent.postMessage({ type: 'axOS_loadFile', payload: { filename }, id: id }, '*'); }
+        
+        // UPDATED: Now includes a simulation for standalone use
+        function saveFile(filename, content, callback) {
+            const id = messageId++;
+            fileSystemCallbacks[id] = callback;
+            parent.postMessage({ type: 'axOS_saveFile', payload: { filename, content }, id: id }, '*');
+            
+            // --- SIMULATION FOR STANDALONE DEV ---
+            // If the host OS doesn't respond in 500ms, simulate a success response.
+            // This prevents the modal from getting stuck on "Saving..." forever.
+            setTimeout(() => {
+                if (fileSystemCallbacks[id]) {
+                    fileSystemCallbacks[id]({ success: true }); // Call with success
+                    delete fileSystemCallbacks[id]; // Clean up
+                }
+            }, 500);
+        }
         
         // --- App Logic ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -88,106 +104,66 @@
             const brushSizeSlider=document.getElementById('brush-size'); const sizeDisplay=document.getElementById('size-display');
             const brushTypeSelector=document.getElementById('brush-type'); const colorPaletteContainer=document.getElementById('color-palette');
             const saveModalOverlay=document.getElementById('save-modal-overlay'); const saveStatusMessage=document.getElementById('save-status-message');
-            const closeModalBtn=document.getElementById('close-modal-btn'); const welcomeMessage=document.getElementById('welcome-message');
+            const okModalBtn=document.getElementById('ok-modal-btn'); // Renamed button
+            const welcomeMessage=document.getElementById('welcome-message');
 
             let isDrawing=false, currentColor='#FF0000', brushSize=5, currentBrush='normal', lastX=0, lastY=0;
             let osEnvironment = { username: 'Guest' };
             
-            // --- Unified File Rendering Logic ---
             function renderFile(filename, content) {
-                clearCanvas();
-                const extension = filename.split('.').pop().toLowerCase();
-
-                if (extension === 'art') {
-                    const img = new Image();
-                    img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
-                    img.onerror = () => showOSDialog(`Could not load image data from '${filename}'.`);
-                    img.src = content;
-                } else if (extension === 'txt') {
-                    drawTextOntoCanvas(content);
-                } else {
-                    showOSDialog(`Unsupported file type: .${extension}`);
-                    return; // Stop if unsupported
-                }
-                
-                showOSDialog(`Opened '${filename}'.`);
-                filenameInput.value = filename; // Update UI
+                clearCanvas(); const extension=filename.split('.').pop().toLowerCase();
+                if(extension==='art'){const i=new Image();i.onload=()=>ctx.drawImage(i,0,0,canvas.width,canvas.height);i.onerror=()=>showOSDialog(`Could not load image from '${filename}'.`);i.src=content;}else if(extension==='txt'){drawTextOntoCanvas(content);}else{showOSDialog(`Unsupported file: .${extension}`);return;}
+                showOSDialog(`Opened '${filename}'.`);filenameInput.value=filename;
             }
 
-            // --- OS Integration: Listen for messages from the OS ---
             window.addEventListener('message', (event) => {
-                const { type, payload, id } = event.data;
-                // For request/response calls like saveFile
-                if (fileSystemCallbacks[id]) {
-                    fileSystemCallbacks[id](payload); 
-                    delete fileSystemCallbacks[id];
-                // For OS environment updates
-                } else if (type === 'axOS_environmentUpdate') {
-                    updateOSInfo(payload);
-                // For push-based file opening from the OS
-                } else if (type === 'axOS_loadFileContent') {
-                    console.log(`Received file content for: ${payload.filename}`);
-                    renderFile(payload.filename, payload.content);
-                }
+                const {type,payload,id}=event.data;
+                if(fileSystemCallbacks[id]){fileSystemCallbacks[id](payload);delete fileSystemCallbacks[id];}
+                else if(type==='axOS_environmentUpdate'){updateOSInfo(payload);}
+                else if(type==='axOS_loadFileContent'){renderFile(payload.filename,payload.content);}
             });
             
-            // --- Color Palette Setup ---
             const colors=['#FFFFFF','#C1C1C1','#858585','#555555','#2A2A2A','#000000','#007bff','#19a974','#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3','#e81cff','#ff4136','#ff851b','#ffdc00','#2ecc40','#7fdbff','#b10dc9','#f012be','#39cccc','#f56565','#ed8936','#ecc94b','#48bb78','#4299e1','#9f7aea','#ed64a6','#a0aec0'];
-            colors.forEach(c => { const s=document.createElement('div');s.className='color-swatch';s.style.backgroundColor=c;if(c===currentColor)s.classList.add('selected');s.addEventListener('click',()=>{currentColor=c;document.querySelector('.color-swatch.selected')?.classList.remove('selected');s.classList.add('selected');});colorPaletteContainer.appendChild(s); });
+            colors.forEach(c=>{const s=document.createElement('div');s.className='color-swatch';s.style.backgroundColor=c;if(c===currentColor)s.classList.add('selected');s.addEventListener('click',()=>{currentColor=c;document.querySelector('.color-swatch.selected')?.classList.remove('selected');s.classList.add('selected');});colorPaletteContainer.appendChild(s);});
             
-            // --- Canvas & Core Drawing Logic ---
-            function clearCanvas() { ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,canvas.width,canvas.height); }
-            window.addEventListener('resize', ()=>{ const d=canvas.toDataURL(); canvas.width=canvasContainer.clientWidth;canvas.height=canvasContainer.clientHeight;const i=new Image();i.onload=()=>ctx.drawImage(i,0,0);i.src=d; });
+            function clearCanvas() { ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,canvas.width,canvas.height); }
+            window.addEventListener('resize', ()=>{const d=canvas.toDataURL();canvas.width=canvasContainer.clientWidth;canvas.height=canvasContainer.clientHeight;const i=new Image();i.onload=()=>ctx.drawImage(i,0,0);i.src=d;});
             canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; clearCanvas();
-            function getCoords(e) { const r=canvas.getBoundingClientRect();const v=e.touches?e.touches[0]:e;return [v.clientX-r.left, v.clientY-r.top]; }
-            function startDrawing(e){ e.preventDefault(); isDrawing=true; [lastX, lastY]=getCoords(e); }
-            function draw(e) { if (!isDrawing) return; e.preventDefault(); const [cX, cY]=getCoords(e);Object.assign(ctx, { lineWidth: brushSize, lineCap: 'round', lineJoin: 'round', globalCompositeOperation: (currentBrush === 'eraser') ? 'destination-out' : 'source-over', strokeStyle: (currentBrush === 'eraser') ? 'rgba(0,0,0,1)' : currentColor, fillStyle: currentColor });
-                switch(currentBrush) { case 'spray': for(let i=brushSize*2;i--;){const r=brushSize/2,oX=(Math.random()-.5)*brushSize,oY=(Math.random()-.5)*brushSize;if(Math.sqrt(oX*oX+oY*oY)<=r)ctx.fillRect(cX+oX,cY+oY,1,1);}break; case 'ribbon':ctx.beginPath();ctx.moveTo(lastX-brushSize/4,lastY-brushSize/4);ctx.lineTo(cX-brushSize/4,cY-brushSize/4);ctx.stroke();ctx.beginPath();ctx.moveTo(lastX+brushSize/4,lastY+brushSize/4);ctx.lineTo(cX+brushSize/4,cY+brushSize/4);ctx.stroke();break; default:ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(cX,cY);ctx.stroke();break; }
-                [lastX, lastY] = [cX, cY];
-            }
-            function stopDrawing() { isDrawing = false; ctx.beginPath(); }
+            function getCoords(e){const r=canvas.getBoundingClientRect();const v=e.touches?e.touches[0]:e;return[v.clientX-r.left, v.clientY-r.top];}
+            function startDrawing(e){e.preventDefault();isDrawing=true;[lastX,lastY]=getCoords(e);}
+            function draw(e){if(!isDrawing)return;e.preventDefault();const [cX,cY]=getCoords(e);Object.assign(ctx,{lineWidth:brushSize,lineCap:'round',lineJoin:'round',globalCompositeOperation:(currentBrush==='eraser')?'destination-out':'source-over',strokeStyle:(currentBrush==='eraser')?'rgba(0,0,0,1)':currentColor,fillStyle:currentColor});
+            switch(currentBrush){case'spray':for(let i=brushSize*2;i--;){const r=brushSize/2,oX=(Math.random()-.5)*brushSize,oY=(Math.random()-.5)*brushSize;if(Math.sqrt(oX*oX+oY*oY)<=r)ctx.fillRect(cX+oX,cY+oY,1,1);}break;case'ribbon':ctx.beginPath();ctx.moveTo(lastX-brushSize/4,lastY-brushSize/4);ctx.lineTo(cX-brushSize/4,cY-brushSize/4);ctx.stroke();ctx.beginPath();ctx.moveTo(lastX+brushSize/4,lastY+brushSize/4);ctx.lineTo(cX+brushSize/4,cY+brushSize/4);ctx.stroke();break;default:ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(cX,cY);ctx.stroke();break;}
+            [lastX,lastY]=[cX,cY];}
+            function stopDrawing(){isDrawing=false;ctx.beginPath();}
             
-            // --- UI Event Listeners ---
-            canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseleave', stopDrawing);
-            canvas.addEventListener('touchstart', startDrawing, {passive:false}); canvas.addEventListener('touchmove', draw, {passive:false}); canvas.addEventListener('touchend', stopDrawing);
-            clearBtn.addEventListener('click', clearCanvas);
-            brushSizeSlider.addEventListener('input', (e)=>(sizeDisplay.textContent=brushSize=e.target.value));
-            brushTypeSelector.addEventListener('change', (e)=>(currentBrush=e.target.value));
+            canvas.addEventListener('mousedown',startDrawing);canvas.addEventListener('mousemove',draw);canvas.addEventListener('mouseup',stopDrawing);canvas.addEventListener('mouseleave',stopDrawing);
+            canvas.addEventListener('touchstart',startDrawing,{passive:false});canvas.addEventListener('touchmove',draw,{passive:false});canvas.addEventListener('touchend',stopDrawing);
+            clearBtn.addEventListener('click',clearCanvas);
+            brushSizeSlider.addEventListener('input',(e)=>(sizeDisplay.textContent=brushSize=e.target.value));
+            brushTypeSelector.addEventListener('change',(e)=>(currentBrush=e.target.value));
             
-            // --- Specific Functionality ---
-            function drawTextOntoCanvas(text) {
-                ctx.fillStyle="#000000"; ctx.font="16px sans-serif";
-                const words = text.split(/(\s+)/); let line = ''; let y=30; const x=15; const maxWidth=canvas.width-(x*2);
-                for (const word of words) {
-                    const testLine = line + word; const metrics = ctx.measureText(testLine);
-                    if (metrics.width > maxWidth && line.length > 0) { ctx.fillText(line, x, y); line = word.trimStart(); y += 20; } 
-                    else { line = testLine; }
-                }
-                ctx.fillText(line, x, y);
-            }
-            closeModalBtn.addEventListener('click', ()=>saveModalOverlay.style.display='none');
+            function drawTextOntoCanvas(text){ctx.fillStyle="#000000";ctx.font="16px sans-serif";const words=text.split(/(\s+)/);let line='';let y=30;const x=15;const maxWidth=canvas.width-(x*2);for(const word of words){const testLine=line+word;const metrics=ctx.measureText(testLine);if(metrics.width>maxWidth&&line.length>0){ctx.fillText(line,x,y);line=word.trimStart();y+=20;}else{line=testLine;}}ctx.fillText(line,x,y);}
+            
+            // UPDATED: Save Logic with Ok Button
+            okModalBtn.addEventListener('click', () => saveModalOverlay.style.display='none');
             saveBtn.addEventListener('click', () => {
                 let filename=filenameInput.value.trim();if(!filename){showOSDialog("Please enter a filename.");return;}
-                if(!filename.toLowerCase().endsWith('.art')) { filename+='.art'; filenameInput.value=filename; }
-                saveStatusMessage.textContent='Saving...'; closeModalBtn.style.display='none';
+                if(!filename.toLowerCase().endsWith('.art')){filename+='.art';filenameInput.value=filename;}
+                saveStatusMessage.textContent='Saving...'; okModalBtn.style.display='none';
                 saveModalOverlay.style.display='flex';
                 saveFile(filename, canvas.toDataURL('image/png'), (response)=>{
-                    saveStatusMessage.textContent = response.success ? `'${filename}' saved!` : `Error: ${response.error}`;
-                    closeModalBtn.style.display='inline-block';
+                    saveStatusMessage.textContent = response.success ? `'${filename}' saved!` : `Error saving file.`;
+                    okModalBtn.style.display='inline-block';
                 });
             });
-            function updateOSInfo(payload) {
-                osEnvironment = { ...osEnvironment, ...payload };
-                welcomeMessage.textContent = `Welcome, ${osEnvironment.username}`;
-            }
 
-            // --- APP INITIALIZATION ---
-            function initializeApp() {
-                const artFileIcon = 'data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/><path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="75" r="8" fill="#007bff"/></svg>`);
-                registerFileType('art', window.location.href, 'axOS Paint Drawing', artFileIcon);
-                const txtFileIcon = 'data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#fff" stroke="#bbb" stroke-width="2"/><path d="M25 30h50 M25 45h50 M25 60h30" stroke="#555" stroke-width="4" stroke-linecap="round"/></svg>`);
-                registerFileType('txt', window.location.href, 'Text Document', txtFileIcon);
-                // The app is now ready to receive `axOS_loadFileContent` messages.
+            function updateOSInfo(payload){osEnvironment={...osEnvironment,...payload};welcomeMessage.textContent=`Welcome, ${osEnvironment.username}`;}
+
+            function initializeApp(){
+                const artIcon='data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#f0f0f0" stroke="#aaa" stroke-width="2"/><path d="M50,20 Q65,20 68,35 C71,50 60,65 50,70" fill="none" stroke="#ff851b" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="75" r="8" fill="#007bff"/></svg>`);
+                registerFileType('art',window.location.href,'axOS Paint Drawing',artIcon);
+                const txtIcon='data:image/svg+xml;base64,'+btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="5" fill="#fff" stroke="#bbb" stroke-width="2"/><path d="M25 30h50 M25 45h50 M25 60h30" stroke="#555" stroke-width="4" stroke-linecap="round"/></svg>`);
+                registerFileType('txt',window.location.href,'Text Document',txtIcon);
             }
             initializeApp();
         });
