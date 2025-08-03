@@ -63,7 +63,7 @@
         }
         canvas {
             display: block;
-            background-color: #fff; /* A white canvas is standard */
+            background-color: #fff;
             cursor: crosshair;
         }
         .canvas-container {
@@ -137,9 +137,6 @@
     <script>
         // --- axOS Integration ---
         const axOS = {
-            _requestId: 0,
-            _promises: new Map(),
-
             saveFile(filename, content) {
                 if (!filename.endsWith('.art')) {
                     filename += '.art';
@@ -148,20 +145,6 @@
                 window.parent.postMessage({ type: 'axOS_showDialog', payload: { message: `Saved '${filename}' successfully!` } }, '*');
             }
         };
-
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'axOS_loadFileContent') {
-                const { filename, content } = event.data.payload;
-                filenameInput.value = filename;
-                
-                const img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = content; // The content is the Base64 data URL
-            }
-        });
 
         // --- Paint App Logic ---
         const canvas = document.getElementById('paint-canvas');
@@ -189,27 +172,50 @@
         let lastY = 0;
         let currentColor = '#000000';
         let isEraser = false;
+        
+        // **FIX**: This variable will hold the current state of the canvas to redraw on resize.
+        let currentImageState = null;
 
+        // **FIX**: The resize function now intelligently redraws the saved state.
         function resizeCanvas() {
             canvas.width = canvasContainer.clientWidth;
             canvas.height = canvasContainer.clientHeight;
+            
+            // Set the base background color
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // If we have a previous state (from loading or drawing), draw it back on.
+            if (currentImageState) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = currentImageState;
+            }
         }
 
         function draw(e) {
             if (!isDrawing) return;
             
             ctx.strokeStyle = isEraser ? '#FFFFFF' : currentColor;
-            ctx.lineJoin = 'round'; // Keeps lines smooth
             ctx.lineWidth = brushSizeSlider.value;
-            // brush shape is set by other buttons
+            ctx.lineCap = squareBrushBtn.classList.contains('active') ? 'square' : 'round';
+            ctx.lineJoin = 'round';
             
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
             ctx.lineTo(e.offsetX, e.offsetY);
             ctx.stroke();
             [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                // **FIX**: Update the image state after the user finishes a brush stroke.
+                currentImageState = canvas.toDataURL('image/png');
+            }
         }
         
         function createPalette() {
@@ -236,23 +242,25 @@
             [lastX, lastY] = [e.offsetX, e.offsetY];
         });
         canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', () => isDrawing = false);
-        canvas.addEventListener('mouseout', () => isDrawing = false);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
 
         brushSizeSlider.addEventListener('input', (e) => {
             brushSizeLabel.textContent = e.target.value;
-            ctx.lineWidth = e.target.value;
         });
 
         clearButton.addEventListener('click', () => {
+             // **FIX**: Clear the saved state when clearing the canvas.
+             currentImageState = null;
              ctx.fillStyle = '#FFFFFF';
              ctx.fillRect(0, 0, canvas.width, canvas.height);
         });
         
         saveButton.addEventListener('click', () => {
             const filename = filenameInput.value || 'untitled.art';
-            const dataUrl = canvas.toDataURL('image/png'); // This is a Base64 string
-            axOS.saveFile(filename, dataUrl);
+            // Ensure the state is up-to-date before saving
+            currentImageState = canvas.toDataURL('image/png');
+            axOS.saveFile(filename, currentImageState);
         });
 
         penToolBtn.addEventListener('click', () => {
@@ -268,15 +276,27 @@
         });
 
         roundBrushBtn.addEventListener('click', () => {
-            ctx.lineCap = 'round';
             roundBrushBtn.classList.add('active');
             squareBrushBtn.classList.remove('active');
         });
         
         squareBrushBtn.addEventListener('click', () => {
-            ctx.lineCap = 'square';
             squareBrushBtn.classList.add('active');
             roundBrushBtn.classList.remove('active');
+        });
+        
+        // **FIX**: The message listener now updates the global state.
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'axOS_loadFileContent') {
+                const { filename, content } = event.data.payload;
+                filenameInput.value = filename;
+                
+                // Store the loaded content as our current state
+                currentImageState = content;
+                
+                // Trigger a resize to correctly draw the loaded image onto the canvas
+                resizeCanvas();
+            }
         });
         
         window.addEventListener('resize', resizeCanvas);
@@ -284,7 +304,6 @@
         // Initialize
         createPalette();
         resizeCanvas();
-        ctx.lineCap = 'round';
         penToolBtn.classList.add('active');
         roundBrushBtn.classList.add('active');
 
