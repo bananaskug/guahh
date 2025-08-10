@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosmic Collector</title>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0c0a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Fredoka One', cursive;
+        }
+
+        canvas {
+            background-color: #16132b;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(173, 216, 230, 0.5);
+        }
+
+        #gameContainer {
+            position: relative;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 2.5em;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none; /* Allows clicks to go through to the canvas */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <span id="score">Score: 0</span>
+            <span id="highScore">High: 0</span>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME SETUP ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+
+        let score = 0;
+        let highScore = localStorage.getItem('cosmicCollectorHighScore') || 0;
+        let controllerIndex = null;
+        let leftPressed = false;
+        let rightPressed = false;
+        let gameState = 'start'; // 'start', 'playing', 'gameOver'
+
+        // --- AUDIO ASSETS (Embedded) ---
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Simple function to decode audio data
+        function decodeAudio(base64) {
+            const byteCharacters = atob(base64.split(',')[1]);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return audioContext.decodeAudioData(byteArray.buffer);
+        }
+
+        function playSound(buffer) {
+            if (!buffer) return;
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+        }
+
+        let collectSoundBuffer, gameOverSoundBuffer, musicSource;
+        const bgMusicBase64 = "data:audio/mp3;base64,your_base64_encoded_music_file_here"; // Replace with a real base64 music file for background music
+        const collectSoundBase64 = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVcV/1QAGQArADYASgBXAGMAcwB8AIUAlACdAKsAtQDCAMsA1ADcAN0A5ADrAPQA+gD+AP8A/wD/AP8A/wD9APkA6wDkAN4A3ADSA MMAuACsAJwAlgCFAG8AaABYAEsANgAoABsAGAAWABEADgAJAAcABQADAAAA/v/3/+f/4//j/+L/3//e/9v/2P/R/83/yv/G/8P/wf+/f7x/un+yf6t/p3+kf6I/nX+Xf5S/kf+Qf45/jn+Nf41/jL+Lf4n/if+J/4o/iwAAAAA";
+        const gameOverSoundBase64 = "data:audio/wav;base64,UklGRisCAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYADAAB/AnUEdgqWDE4ScxN6E5MSpRH5EOUQ7Q7YDRMNeAuKBaoEeQCg/5n/bf+J/6D/uv+4/7D/ov+d/6T/rv+8/8L/0f/Y/9v/3//k/+n/8f/2//v//gEDAQQDCwQeA0ID6P8O/oX+Of39/Iz6+fUo9R3xMvA+7dXsWOl35RnmCuLw3c7aMdcW0i7PMMpzxqLDssCuwVnBQsEawcbDgsS3xr/Mms+10wHVYtoN3n/jAekD7Qf0QvlS+o39eAAEBAIGAwoEOAefAZUBpQHlAfv/CwALAAgACwAKAAwAEQAZACEALQA5AEEATQBVAFwAZwByAHcAeQCIAI8AnwCwALsAxADPANQA3QDpAPIA/wAEAAYACQANABIAGAAeACUALAA2AEEASgBTAVoBYwFnAXEBdAGCAYwBlwGaAZoBngGiAaUBpAGhAZ8BowGiAaEBnwGeAZgBlgGPAZIBkgGR";
+
+        // Decode sounds
+        decodeAudio(collectSoundBase64).then(buffer => collectSoundBuffer = buffer);
+        decodeAudio(gameOverSoundBase64).then(buffer => gameOverSoundBuffer = buffer);
+
+        // Function to start looping background music
+        function startMusic() {
+            // Placeholder: to implement music, you would use a longer base64 audio string
+            // and set source.loop = true;
+            console.log("Background music would start here if a full track was provided.");
+        }
+
+
+        // --- GAME OBJECTS ---
+        const player = {
+            width: 60,
+            height: 70,
+            x: canvas.width / 2 - 30,
+            y: canvas.height - 80,
+            speed: 12,
+            flameCycle: 0,
+            draw: function() {
+                // Rocket Body
+                ctx.fillStyle = '#d0d0d8';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x, this.y + this.height * 0.7);
+                ctx.lineTo(this.x + this.width, this.y + this.height * 0.7);
+                ctx.closePath();
+                ctx.fill();
+
+                // Rocket Fins
+                ctx.fillStyle = '#e04040';
+                ctx.fillRect(this.x - 10, this.y + this.height * 0.7, 10, 20);
+                ctx.fillRect(this.x + this.width, this.y + this.height * 0.7, 10, 20);
+
+                // Flame
+                this.flameCycle += 0.5;
+                const flameHeight = 20 + Math.sin(this.flameCycle) * 5;
+                ctx.fillStyle = Math.random() > 0.5 ? '#f8a040' : '#f8d040';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width * 0.3, this.y + this.height * 0.7);
+                ctx.lineTo(this.x + this.width * 0.7, this.y + this.height * 0.7);
+                ctx.lineTo(this.x + this.width / 2, this.y + this.height * 0.7 + flameHeight);
+                ctx.closePath();
+                ctx.fill();
+            }
+        };
+
+        let items = [];
+        let particles = [];
+        let backgroundStars = [];
+        let difficultySpeed = 2;
+
+        // --- OBJECT CREATION ---
+        function createItem(type) {
+            const size = type === 'star' ? 20 : (type === 'comet' ? 25 : 30);
+            items.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                size: size,
+                speed: (type === 'comet' ? difficultySpeed * 1.5 : difficultySpeed) + Math.random() * 2,
+                type: type,
+                rotation: 0
+            });
+        }
+
+        function createParticle(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 3 + 1,
+                    speedX: (Math.random() - 0.5) * 5,
+                    speedY: (Math.random() - 0.5) * 5,
+                    color: color,
+                    life: 30
+                });
+            }
+        }
+
+        // Initialize background stars
+        for (let i = 0; i < 150; i++) {
+            backgroundStars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                opacity: Math.random()
+            });
+        }
+
+        // --- DRAWING FUNCTIONS ---
+        function drawItems() {
+            items.forEach(item => {
+                ctx.save();
+                ctx.translate(item.x + item.size / 2, item.y + item.size / 2);
+                item.rotation += 0.02;
+                ctx.rotate(item.rotation);
+                ctx.translate(-(item.x + item.size / 2), -(item.y + item.size / 2));
+
+                if (item.type === 'star') {
+                    ctx.fillStyle = '#FFFF00';
+                    drawStarShape(item.x, item.y, 5, item.size / 2, item.size / 4);
+                } else if (item.type === 'comet') {
+                     ctx.fillStyle = '#7DF9FF'; // Electric Blue
+                     drawStarShape(item.x, item.y, 5, item.size/2, item.size/4);
+                     ctx.fillStyle = 'rgba(125, 249, 255, 0.3)';
+                     ctx.beginPath();
+                     ctx.arc(item.x+item.size/2, item.y+item.size/2, item.size, 0, Math.PI * 2);
+                     ctx.fill();
+                } else if (item.type === 'blackhole') {
+                    ctx.fillStyle = '#202020';
+                    ctx.beginPath();
+                    ctx.arc(item.x + item.size/2, item.y + item.size/2, item.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#8a2be2'; // Blue Violet
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+        }
+        // Helper to draw a classic star shape
+        function drawStarShape(cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius)
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y)
+                rot += step
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y)
+                rot += step
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawParticles() {
+            particles.forEach((p, index) => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+                p.life--;
+                if (p.life <= 0) {
+                    particles.splice(index, 1);
+                }
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function drawBackground() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            backgroundStars.forEach(star => {
+                star.opacity += (Math.random() - 0.5) * 0.1;
+                if (star.opacity < 0) star.opacity = 0;
+                if (star.opacity > 1) star.opacity = 1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+        }
+
+        // --- GAME LOGIC & UPDATE ---
+        function updateGame() {
+            if (gameState !== 'playing') return;
+
+            // --- Handle Input ---
+            if (controllerIndex !== null) {
+                const gamepad = navigator.getGamepads()[controllerIndex];
+                const horizontalAxis = gamepad.axes[0]; // Left stick horizontal
+                const dpadLeft = gamepad.buttons[14].pressed;
+                const dpadRight = gamepad.buttons[15].pressed;
+
+                leftPressed = dpadLeft || horizontalAxis < -0.5;
+                rightPressed = dpadRight || horizontalAxis > 0.5;
+            }
+
+            if (leftPressed && player.x > 0) player.x -= player.speed;
+            if (rightPressed && player.x < canvas.width - player.width) player.x += player.speed;
+
+
+            // --- Update Item Positions ---
+            items.forEach((item, itemIndex) => {
+                item.y += item.speed;
+
+                // Off-screen removal
+                if (item.y > canvas.height) {
+                    items.splice(itemIndex, 1);
+                }
+
+                // Collision detection
+                if (item.x < player.x + player.width &&
+                    item.x + item.size > player.x &&
+                    item.y < player.y + player.height &&
+                    item.y + item.size > player.y)
+                {
+                    if (item.type === 'star') {
+                        score += 10;
+                        createParticle(item.x + item.size / 2, item.y + item.size / 2, '#FFFF00');
+                        playSound(collectSoundBuffer);
+                    } else if (item.type === 'comet') {
+                        score += 50;
+                        createParticle(item.x + item.size / 2, item.y + item.size / 2, '#7DF9FF');
+                        playSound(collectSoundBuffer);
+                    } else if (item.type === 'blackhole') {
+                        playSound(gameOverSoundBuffer);
+                        setGameOver();
+                        return; // Exit loop early
+                    }
+                    items.splice(itemIndex, 1);
+                    scoreElement.textContent = "Score: " + score;
+                }
+            });
+
+            // --- Item Spawning Logic ---
+            const spawnRoll = Math.random();
+            if (spawnRoll < 0.005 && items.filter(i => i.type === 'blackhole').length === 0) { // Limit to one black hole at a time
+                createItem('blackhole');
+            } else if (spawnRoll < 0.02) {
+                createItem('comet');
+            } else if (spawnRoll < 0.06) {
+                createItem('star');
+            }
+
+            // --- Difficulty Increase ---
+            difficultySpeed += 0.001;
+        }
+
+        // --- RENDER LOOP ---
+        function gameLoop() {
+            drawBackground();
+
+            if (gameState === 'playing') {
+                updateGame();
+                player.draw();
+                drawItems();
+            } else {
+                // Draw static elements when not playing
+                player.draw();
+                drawItems();
+                if (gameState === 'start') {
+                    drawTextScreen('COSMIC COLLECTOR', 'Connect Controller & Press (A) Button to Start', 'Use D-Pad or Left Stick to Move');
+                } else if (gameState === 'gameOver') {
+                    drawTextScreen('GAME OVER', `Final Score: ${score}`, 'Press (A) to play again');
+                }
+            }
+
+            drawParticles();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- GAME STATE MANAGEMENT ---
+        function startGame() {
+            if (gameState !== 'playing') {
+                audioContext.resume(); // User interaction allows audio to start
+                gameState = 'playing';
+                score = 0;
+                difficultySpeed = 2;
+                items = [];
+                particles = [];
+                player.x = canvas.width / 2 - 30;
+                scoreElement.textContent = 'Score: 0';
+                startMusic();
+            }
+        }
+
+        function setGameOver() {
+            gameState = 'gameOver';
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('cosmicCollectorHighScore', highScore);
+                highScoreElement.textContent = "High: " + highScore;
+            }
+        }
+
+        function drawTextScreen(title, subtitle, prompt) {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, canvas.height / 2 - 100, canvas.width, 200);
+
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '60px "Fredoka One", cursive';
+            ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 20);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '24px "Fredoka One", cursive';
+            ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 25);
+            ctx.fillText(prompt, canvas.width / 2, canvas.height / 2 + 60);
+        }
+
+        // --- EVENT LISTENERS ---
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log(`Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}.`);
+            controllerIndex = e.gamepad.index;
+        });
+
+        window.addEventListener('gamepaddisconnected', () => {
+            controllerIndex = null;
+            leftPressed = rightPressed = false;
+        });
+
+        // Main button listener for gamepad
+        function checkButtons() {
+            if (controllerIndex !== null) {
+                const gamepad = navigator.getGamepads()[controllerIndex];
+                if (gamepad.buttons[0].pressed) { // 'A' button on Xbox controller
+                    if (gameState === 'start' || gameState === 'gameOver') {
+                        startGame();
+                    }
+                }
+            }
+            requestAnimationFrame(checkButtons);
+        }
+
+        // Keyboard controls for fallback and starting the game
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') leftPressed = true;
+            if (e.key === 'ArrowRight') rightPressed = true;
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (gameState === 'start' || gameState === 'gameOver') {
+                    startGame();
+                }
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') leftPressed = false;
+            if (e.key === 'ArrowRight') rightPressed = false;
+        });
+
+
+        // --- START GAME ---
+        highScoreElement.textContent = "High: " + highScore;
+        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(checkButtons);
+
+    </script>
+</body>
+</html>
