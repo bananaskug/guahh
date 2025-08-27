@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Minimal OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* Removes the blue highlight that appears on touch */
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Prevents scrolling */
+        }
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Space Mono', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 1.25rem;
+        }
+
+        /* --- Screens --- */
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: none; /* Hide all screens by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #home-screen {
+            display: flex; /* Show the home screen by default */
+        }
+        
+        /* --- Home Screen --- */
+        #clock {
+            font-size: 4rem;
+            margin-bottom: 3rem;
+        }
+        #app-list {
+            list-style: none;
+        }
+        #app-list li {
+            font-size: 2rem;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            padding: 10px;
+        }
+        #app-list li:active {
+            opacity: 0.5;
+        }
+        
+        /* --- General App Styles --- */
+        .app-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            position: absolute;
+            top: 10%;
+        }
+        .app-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        input, textarea {
+            background-color: #111;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        textarea {
+            height: 200px;
+            resize: none;
+            text-align: left;
+        }
+        /* Makes the time picker icon white for better visibility */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+        button {
+            cursor: pointer;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.25rem;
+            width: 100%;
+            padding: 15px;
+            margin-top: 0.5rem;
+        }
+        button:active {
+             background-color: #ccc;
+        }
+        .confirmation-message {
+            margin-top: 1.5rem;
+            color: #0f0; /* Green for success */
+            height: 2rem; /* Reserve space to prevent layout shifting */
+            font-size: 1rem;
+        }
+
+        /* --- Swipe Up Home Bar --- */
+        #home-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px; /* Make a taller, easier touch target */
+            display: none; /* Hidden on home screen */
+            z-index: 100;
+        }
+        /* This pseudo-element is the visible white line */
+        #home-bar::after {
+            content: '';
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen">
+        <div>
+            <div id="clock"></div>
+            <ul id="app-list">
+                <li onclick="openApp('text-app')">Text</li>
+                <li onclick="openApp('alarm-app')">Alarm</li>
+                <li onclick="openApp('notes-app')">Notes</li>
+                <li onclick="openApp('settings-app')">Settings</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Text App Screen -->
+    <div id="text-app" class="screen">
+        <div class="app-title">Text</div>
+        <div class="app-content">
+            <textarea id="text-message" placeholder="Type message..." autofocus></textarea>
+            <button onclick="sendText()">Send</button>
+            <div id="text-confirm" class="confirmation-message"></div>
+        </div>
+    </div>
+
+    <!-- Alarm App Screen -->
+    <div id="alarm-app" class="screen">
+        <div class="app-title">Alarm</div>
+        <div class="app-content">
+            <input id="alarm-time" type="time">
+            <button onclick="setAlarm()">Set</button>
+            <div id="alarm-confirm" class="confirmation-message"></div>
+        </div>
+    </div>
+    
+    <!-- Notes App Screen -->
+    <div id="notes-app" class="screen">
+        <div class="app-title">Notes</div>
+        <div class="app-content">
+            <textarea id="note-content" placeholder="Type note..."></textarea>
+            <button onclick="saveNote()">Save</button>
+            <div id="note-confirm" class="confirmation-message"></div>
+        </div>
+    </div>
+    
+    <!-- Settings App Screen -->
+    <div id="settings-app" class="screen">
+        <div class="app-title">Settings</div>
+        <div class="app-content" style="text-align: left; font-size: 1.5rem; line-height: 2.5;">
+             <p>Brightness: Auto</p>
+             <p>Sound: On</p>
+             <p>Font: Space Mono</p>
+             <p>Airplane Mode: Off</p>
+        </div>
+    </div>
+
+    <!-- This is the invisible swipe area containing the visible white line -->
+    <div id="home-bar"></div>
+
+    <script>
+        // --- Universal Functions ---
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            
+            hours = hours % 12;
+            hours = hours ? hours : 12; // '0' hour should be '12'
+            
+            document.getElementById('clock').textContent = `${hours}:${minutes} ${ampm}`;
+        }
+
+        function openApp(appId) {
+            // Hide home and show the home bar for navigation
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('home-bar').style.display = 'block';
+            
+            const appScreen = document.getElementById(appId);
+            appScreen.style.display = 'flex';
+            
+            // Auto-focus on the primary input of the app for ease of use
+            const mainInput = appScreen.querySelector('textarea, input');
+            if (mainInput) {
+                mainInput.focus();
+            }
+        }
+
+        function goHome() {
+            // Hide all app screens and the home bar
+            document.querySelectorAll('.screen').forEach(screen => screen.style.display = 'none');
+            document.getElementById('home-bar').style.display = 'none';
+            
+            // Show the home screen
+            document.getElementById('home-screen').style.display = 'flex';
+            
+            // Clear any temporary text or confirmation messages from apps
+            document.querySelectorAll('.confirmation-message').forEach(msg => msg.innerText = '');
+            document.querySelectorAll('textarea, input[type="time"]').forEach(input => input.value = '');
+        }
+        
+        // --- App Specific Functions ---
+        function showConfirmation(elementId, message) {
+            const confirmElement = document.getElementById(elementId);
+            confirmElement.innerText = message;
+            // Message disappears after 2 seconds
+            setTimeout(() => {
+                if (confirmElement) confirmElement.innerText = '';
+            }, 2000); 
+        }
+
+        function sendText() {
+            if (document.getElementById('text-message').value.trim() !== '') {
+                showConfirmation('text-confirm', 'Message Sent!');
+                document.getElementById('text-message').value = '';
+            }
+        }
+        
+        function setAlarm() {
+            const timeValue = document.getElementById('alarm-time').value;
+            if (timeValue) {
+                showConfirmation('alarm-confirm', `Alarm set for ${timeValue}`);
+            } else {
+                showConfirmation('alarm-confirm', `Please select a time.`);
+            }
+        }
+
+        function saveNote() {
+            if (document.getElementById('note-content').value.trim() !== '') {
+                showConfirmation('note-confirm', 'Note Saved!');
+                document.getElementById('note-content').value = '';
+            }
+        }
+
+        // --- SWIPE GESTURE LOGIC ---
+        const homeBar = document.getElementById('home-bar');
+        let touchStartY = 0; // Stores the starting vertical position of the touch
+
+        // Listen for when a finger first touches the bar
+        homeBar.addEventListener('touchstart', e => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        // Listen for when the finger is lifted off the bar
+        homeBar.addEventListener('touchend', e => {
+            const touchEndY = e.changedTouches[0].clientY;
+            // Check if the finger moved upwards by a significant amount (e.g., 50 pixels)
+            if (touchStartY - touchEndY > 50) { 
+                goHome(); // If it's a clear upward swipe, go home.
+            }
+        }, { passive: true });
+
+
+        // --- Initial Load ---
+        setInterval(updateClock, 1000);
+        updateClock(); // Display clock immediately on load
+    </script>
+</body>
+</html>
